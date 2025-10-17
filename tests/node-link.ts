@@ -1,6 +1,7 @@
+/// <reference types="mocha" />
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { NodeLink } from "../target/types/node_link";
+/* Generated types not found locally; omit the import and use a generic Program<any> below */
 import { Keypair, SystemProgram } from "@solana/web3.js";
 
 describe("node-link", () => {
@@ -8,18 +9,14 @@ describe("node-link", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.nodeLink as Program<NodeLink>;
+  const program = anchor.workspace.nodeLink as Program<any>;
 
   it("Registers a node", async () => {
     // Generate a new keypair for the authority.
     const authority = Keypair.generate();
 
     // Airdrop SOL to the authority to pay for the transaction.
-    const airdropSignature = await provider.connection.requestAirdrop(
-      authority.publicKey,
-      1000000000
-    );
-    await provider.connection.confirmTransaction(airdropSignature);
+    await provider.connection.requestAirdrop(authority.publicKey, 1000000000);
 
     // Find the PDA for the node account.
     const [nodeAccount] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -28,7 +25,7 @@ describe("node-link", () => {
     );
 
     // Call the register_node instruction.
-    const tx = await program.methods
+    const tx = await (program as any).methods
       .registerNode()
       .accounts({
         nodeAccount,
@@ -41,7 +38,7 @@ describe("node-link", () => {
     console.log("Your transaction signature", tx);
 
     // Fetch the created account.
-    const account = await program.account.nodeAccount.fetch(nodeAccount);
+    const account = await (program as any).account.nodeAccount.fetch(nodeAccount);
     console.log("Node account created:", account);
 
     // Assert that the authority is set correctly.
