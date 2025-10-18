@@ -6,28 +6,28 @@
 
 ### Giai đoạn 1: Xây dựng Smart Contract (On-chain Program)
 
-- [ ] **1.1: Khởi tạo và Cấu trúc chương trình Anchor**
-  - [ ] Kiểm tra lại cấu trúc dự án Anchor (`Anchor.toml`, `programs/node-link/src/lib.rs`).
-  - Implemented by: 
-- [ ] **1.2: Xây dựng Logic Đăng ký Node (On-chain Registry)**
-  - [ ] Định nghĩa `NodeAccount` (PDA) để lưu thông tin provider.
-  - [ ] Viết instruction `register_node`.
-  - [ ] Viết instruction `update_node_status`.
-  - Implemented by: 
-- [ ] **1.3: Xây dựng Logic Khởi tạo Job và Escrow**
-  - [ ] Định nghĩa `JobAccount` với các trường (`status`, `deadline`, `failed_providers`, ...).
-  - [ ] Định nghĩa `JobStatus` enum.
-  - [ ] Implement logic `EscrowAccount` (PDA) để giữ tiền.
-  - [ ] Viết instruction `create_job` (do Renter gọi).
-  - Implemented by: 
-- [ ] **1.4: Xây dựng Logic Thực thi và Xác minh Job**
-  - [ ] Viết instruction `accept_job` (do Provider gọi), kiểm tra danh sách `failed_providers`.
-  - [ ] Viết instruction `submit_result` (do Provider gọi).
-  - [ ] Viết instruction `verify_job` (do Renter gọi) để xử lý cả kết quả đúng (trả tiền) và sai (reset job).
-  - Implemented by: 
-- [ ] **1.5: Xây dựng Logic Thanh toán Timeout**
-  - [ ] Viết instruction `claim_payment` (do Provider gọi) để nhận tiền khi Renter không phản hồi sau deadline.
-  - Implemented by: 
+- [x] **1.1: Khởi tạo và Cấu trúc chương trình Anchor**
+  - [x] Kiểm tra lại cấu trúc dự án Anchor (`Anchor.toml`, `programs/node-link/src/lib.rs`).
+  - Implemented by: [Khánh]
+- [x] **1.2: Xây dựng Logic Đăng ký Node (On-chain Registry)**
+  - [x] Định nghĩa `NodeAccount` (PDA) để lưu thông tin provider.
+  - [x] Viết instruction `register_node`.
+  - [x] Viết instruction `update_node_status`.
+  - Implemented by: [Khánh]
+- [x] **1.3: Xây dựng Logic Khởi tạo Job và Escrow**
+  - [x] Định nghĩa `JobAccount` với các trường (`status`, `deadline`, `failed_providers`, ...).
+  - [x] Định nghĩa `JobStatus` enum.
+  - [x] Implement logic `EscrowAccount` (PDA) để giữ tiền.
+  - [x] Viết instruction `create_job` (do Renter gọi).
+  - Implemented by: [Khánh]
+- [x] **1.4: Xây dựng Logic Thực thi và Xác minh Job**
+  - [x] Viết instruction `accept_job` (do Provider gọi), kiểm tra danh sách `failed_providers`.
+  - [x] Viết instruction `submit_result` (do Provider gọi).
+  - [x] Viết instruction `verify_job` (do Renter gọi) để xử lý cả kết quả đúng (trả tiền) và sai (reset job).
+  - Implemented by: [Khánh]
+- [x] **1.5: Xây dựng Logic Thanh toán Timeout**
+  - [x] Viết instruction `claim_payment` (do Provider gọi) để nhận tiền khi Renter không phản hồi sau deadline.
+  - Implemented by: [Khánh]
 
 ---
 

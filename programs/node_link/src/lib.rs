@@ -210,7 +210,7 @@ pub struct CreateJob<'info> {
         seeds = [b"escrow", job_account.key().as_ref()],
         bump
     )]
-    /// CHECK: This is the escrow account to hold funds.
+    /// CHECK: Đây là tài khoản giữ tiền thưởng
     pub escrow: UncheckedAccount<'info>,
     #[account(mut)]
     pub renter: Signer<'info>,
