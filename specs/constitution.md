@@ -8,9 +8,10 @@ Tài liệu này định nghĩa các nguyên tắc và thành phần cốt lõi,
 
 1.  **Tập trung vào Luồng End-to-End:** Ưu tiên hàng đầu là hoàn thành một luồng trình diễn hoàn chỉnh: **Gửi Job -> Xử lý -> Xác minh -> Thanh toán**.
 2.  **Đơn giản là Tối thượng:** Mọi thành phần phải được xây dựng ở mức độ đơn giản nhất có thể để chứng minh khái niệm. Các tính năng phức tạp (ví dụ: sandbox bảo mật, matching layer nâng cao) sẽ được để lại cho các giai đoạn sau.
-3.  **Minh bạch On-chain:** Các trạng thái quan trọng nhất (node nào đang online, job nào đang chạy, tiền đã được trả chưa) phải được ghi nhận và có thể xác minh trên blockchain.
-4.  **Giao diện là CLI:** Tương tác của cả Provider và Consumer sẽ được thực hiện qua giao diện dòng lệnh (CLI) để tối ưu thời gian phát triển.
-5.  **Nền tảng là Solana:** Toàn bộ logic on-chain sẽ được xây dựng trên blockchain **Solana**, sử dụng **Anchor framework**. Môi trường mục tiêu cho hackathon là **Devnet**.
+3.  **Tự động hóa cho Provider:** Client của Provider phải được thiết kế như một tiến trình nền tự động (`set it and forget it`), cho phép khai thác tài nguyên rảnh rỗi một cách hiệu quả mà không cần sự can thiệp thủ công.
+4.  **Minh bạch On-chain:** Các trạng thái quan trọng nhất (node nào đang online, job nào đang chạy, tiền đã được trả chưa) phải được ghi nhận và có thể xác minh trên blockchain.
+5.  **Giao diện là CLI:** Tương tác của cả Provider và Consumer sẽ được thực hiện qua giao diện dòng lệnh (CLI) để tối ưu thời gian phát triển.
+6.  **Nền tảng là Solana:** Toàn bộ logic on-chain sẽ được xây dựng trên blockchain **Solana**, sử dụng **Anchor framework**. Môi trường mục tiêu cho hackathon là **Devnet**.
 
 ---
 
@@ -32,7 +33,7 @@ Phải có hai kịch bản sử dụng CLI riêng biệt:
 
 -   **[Cần có] CLI cho Provider (Người cho thuê):**
     -   Lệnh để `register` node của họ.
-    -   Một tiến trình để `listen` (lắng nghe) các job mới được giao.
+    -   Một tiến trình nền tự động để `listen` (lắng nghe) và nhận các job phù hợp.
     -   Logic để `execute` (thực thi) job và `submit` (gửi) kết quả hash lên on-chain.
 
 -   **[Cần có] CLI cho Consumer (Người thuê):**

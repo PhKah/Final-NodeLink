@@ -36,10 +36,13 @@
 - [ ] **2.1: Thiết lập môi trường Client**
   - [ ] Cài đặt `@solana/web3.js`, `@project-serum/anchor`.
   - Implemented by: 
-- [ ] **2.2: Xây dựng Chức năng cho Provider**
-  - [ ] Tạo CLI command `node-link register`.
-  - [ ] Xây dựng tiến trình nền để lắng nghe/nhận job.
-  - [ ] Tích hợp logic thực thi tác vụ và gọi `submit_result`.
+- [ ] **2.2: Xây dựng Chức năng cho Provider (Node Client)**
+  - [ ] Tạo CLI command `node-link register` để đăng ký node.
+  - [ ] Xây dựng tiến trình nền (`daemon`) với các chức năng:
+    - [ ] Tự động quét blockchain để tìm job mới phù hợp tiêu chí (ví dụ: reward).
+    - [ ] Tự động gọi `accept_job` để nhận việc.
+    - [ ] Tự động thực thi tác vụ (ví dụ: chạy một script được chỉ định).
+    - [ ] Tự động gọi `submit_result` sau khi hoàn thành.
   - Implemented by: 
 
 ---

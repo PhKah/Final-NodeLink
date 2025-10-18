@@ -15,6 +15,10 @@ pub enum MyError {
     JobNotInProgress,
     #[msg("Signer is not the assigned provider for this job.")]
     WrongProvider,
+    #[msg("Job is not pending verification.")]
+    JobNotPendingVerification,
+    #[msg("The verification deadline has passed.")]
+    VerificationDeadlinePassed,
 }
 
 #[program]
@@ -47,6 +51,7 @@ pub mod node_link {
                 to: ctx.accounts.escrow.to_account_info(),
             },
         );
+        let escrow = &mut ctx.accounts.escrow;
         transfer(cpi_context,reward)?;
         msg!("Created job's key: {}", ctx.accounts.job_account.key());
         Ok(())
@@ -70,16 +75,67 @@ pub mod node_link {
 
     pub fn submit_results(ctx: Context<SubmitResults>, results: [u8; 32]) -> Result <()> {
         let job_account = &mut ctx.accounts.job_account;
+        let provider_account = &mut ctx.accounts.provider;
         if job_account.status != JobStatus::InProgress {
             return Err(MyError::JobNotInProgress.into());
         }
-        if job_account.provider != ctx.accounts.provider.key() {
+        if job_account.provider != provider_account.authority {
             return Err(MyError::WrongProvider.into());
         }
         job_account.results = results;
         job_account.status = JobStatus::PendingVerification;
         job_account.verification_deadline = Clock::get()?.unix_timestamp + 86400;
+        provider_account.status = ProviderStatus::Available;
         msg!("Provider {} submitted results for job {}", ctx.accounts.provider.key(), job_account.key());
+        Ok(())
+    }
+
+    pub fn verify_results(ctx: Context<VerifyResults>, is_accepted: bool) -> Result<()> {
+        let job_account = &mut ctx.accounts.job_account;
+        if job_account.status != JobStatus:: PendingVerification {
+            return Err(MyError::JobNotPendingVerification.into());
+        }
+        if Clock::get()?.unix_timestamp > job_account.verification_deadline {
+            return Err(MyError::VerificationDeadlinePassed.into());
+        }
+        if is_accepted {
+            let cpi_context = CpiContext:: new (
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.escrow.to_account_info(),
+                    to: ctx.accounts.provider.to_account_info(),
+                }
+            );
+            transfer(cpi_context, job_account.reward)?;
+            job_account.status = JobStatus::Completed;
+            msg!("Renter {} accepted results for job {}", ctx.accounts.renter.key(), job_account.key());
+        }
+        else {
+            let failure = job_account.provider;
+            job_account.failed_providers.push(failure);
+            job_account.provider = Pubkey::default();
+            job_account.status = JobStatus::Pending;
+            msg!("Renter {} rejected results for job {}", ctx.accounts.renter.key(), job_account.key());
+        }
+        Ok(())
+    }
+
+    pub fn claim_payment(ctx: Context<ClaimPayment>) -> Result<()> {
+        let job_account = &mut ctx.accounts.job_account;
+        let provider_account = &mut ctx.accounts.provider;
+        if job_account.verification_deadline > Clock::get()?.unix_timestamp {
+            return Err(MyError::VerificationDeadlinePassed.into());
+        }
+        let cpi_context = CpiContext:: new (
+            ctx.accounts.system_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.escrow.to_account_info(),
+                to: ctx.accounts.provider.to_account_info(),
+            }
+        );
+        transfer(cpi_context, job_account.reward)?;
+        job_account.status = JobStatus::Completed;
+        msg!("Provider {} claimed payment for job {}", ctx.accounts.provider.key(), job_account.key());
         Ok(())
     }
 }
@@ -150,11 +206,12 @@ pub struct CreateJob<'info> {
     #[account(
         init,
         payer = renter,
-        space = ANCHOR_DISCRIMINATOR_SIZE+ Escrow::INIT_SPACE,
+        space = ANCHOR_DISCRIMINATOR_SIZE,
         seeds = [b"escrow", job_account.key().as_ref()],
         bump
     )]
-    pub escrow: Account<'info, Escrow>,
+    /// CHECK: This is the escrow account to hold funds.
+    pub escrow: UncheckedAccount<'info>,
     #[account(mut)]
     pub renter: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -192,6 +249,60 @@ pub struct SubmitResults<'info> {
         bump
     )]
     pub job_account: Account<'info, JobAccount>,
-    pub provider: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"provider", job_account.provider.as_ref()],
+        bump
+    )]
+    pub provider: Account<'info, Provider>,
+    pub provider_sign: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(job_renter: Pubkey, job_details: [u8; 32])]
+pub struct VerifyResults<'info> {
+    #[account(
+        mut,
+        seeds = [b"job", job_renter.as_ref(), &job_details],
+        bump
+    )]
+    pub job_account: Account <'info, JobAccount>,
+    #[account(
+        mut,
+        seeds = [b"escrow", job_account.key().as_ref()],
+        bump
+    )]
+    pub escrow: Account<'info, Escrow>,
+    #[account(mut)]
+    pub renter: Signer<'info>,
+    /// CHECK: Đây là tài khoản ví của provider để nhận tiền.
+    #[account(mut)]
+    pub provider: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(job_renter: Pubkey, job_details: [u8; 32])]
+pub struct ClaimPayment<'info> {
+    #[account(
+        mut,
+        seeds = [b"job", job_renter.as_ref(), &job_details],
+        bump
+    )]
+    pub job_account: Account <'info, JobAccount>,
+    #[account(
+        mut,
+        seeds = [b"provider", provider.key().as_ref()],
+        bump
+    )]
+    pub provider: Account<'info, Provider>,
+    #[account(
+        mut,
+        seeds = [b"escrow", job_account.key().as_ref()],
+        bump
+    )]
+    pub escrow: Account<'info, Escrow>,
+    pub provider_signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }

@@ -6,6 +6,8 @@ Tài liệu này ghi lại các ý tưởng và tính năng tiềm năng để p
 
 ## Matching Layer Nâng cao
 
+**Vấn đề cần giải quyết:** Mô hình MVP hiện tại dựa trên sự tin tưởng, dẫn đến một rủi ro: Renter xấu tính có thể từ chối kết quả đúng để không trả tiền, trong khi Provider không có cơ chế để tự bảo vệ một cách hiệu quả. Các ý tưởng dưới đây nhằm giải quyết vấn đề này bằng cách xây dựng một cơ chế kinh tế và uy tín để khuyến khích hành vi trung thực từ cả hai phía.
+
 Cơ chế "matching layer" chịu trách nhiệm ghép nối Renter (người thuê) và Provider (người cung cấp) một cách hiệu quả và an toàn. Các ý tưởng dưới đây sẽ giúp xây dựng một thị trường tài nguyên tính toán mạnh mẽ và đáng tin cậy.
 
 ### 1. Hệ thống Uy tín (Reputation System)
