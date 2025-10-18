@@ -11,6 +11,10 @@ pub enum MyError {
     JobNotPending,
     #[msg("Provider has previously failed this job.")]
     ProviderPreviouslyFailed,
+    #[msg("Job is not in progress.")]
+    JobNotInProgress,
+    #[msg("Signer is not the assigned provider for this job.")]
+    WrongProvider,
 }
 
 #[program]
@@ -61,6 +65,21 @@ pub mod node_link {
         job_account.status = JobStatus::InProgress;
         provider_account.status = ProviderStatus::Busy;
         msg!("Provider {} accepted job {}", ctx.accounts.provider.key(), job_account.key());
+        Ok(())
+    }
+
+    pub fn submit_results(ctx: Context<SubmitResults>, results: [u8; 32]) -> Result <()> {
+        let job_account = &mut ctx.accounts.job_account;
+        if job_account.status != JobStatus::InProgress {
+            return Err(MyError::JobNotInProgress.into());
+        }
+        if job_account.provider != ctx.accounts.provider.key() {
+            return Err(MyError::WrongProvider.into());
+        }
+        job_account.results = results;
+        job_account.status = JobStatus::PendingVerification;
+        job_account.verification_deadline = Clock::get()?.unix_timestamp + 86400;
+        msg!("Provider {} submitted results for job {}", ctx.accounts.provider.key(), job_account.key());
         Ok(())
     }
 }
@@ -162,5 +181,17 @@ pub struct AcceptJob<'info> {
     pub provider_account: Account<'info, Provider>,
     pub provider: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
 
+#[derive(Accounts)]
+#[instruction(job_renter: Pubkey, job_details: [u8; 32])]
+pub struct SubmitResults<'info> {
+    #[account(
+        mut,
+        seeds = [b"job", job_renter.as_ref(), job_details.as_ref()],
+        bump
+    )]
+    pub job_account: Account<'info, JobAccount>,
+    pub provider: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
