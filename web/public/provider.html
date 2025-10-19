@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NodeLink UI — Provider</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="logo">🟦</span>
+        <div>
+          <div class="brand-title">NodeLink</div>
+          <div class="brand-sub">Web UI</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="/provider.html" class="nav-item active" data-tab="provider">Người Cho Thuê</a>
+        <a href="/consumer.html" class="nav-item" data-tab="consumer">Người Thuê</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2>Người Cho Thuê (Provider)</h2>
+    <div class="grid">
+      <!-- Wallet Status -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Trạng thái Ví</h3>
+            <div class="badge">Wallet</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" id="btnCheckWallet">Kiểm tra ví</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kết quả</label>
+          <pre class="output" id="walletResult"></pre>
+        </div>
+      </section>
+
+      <!-- Register Provider -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Đăng ký Provider</h3>
+            <div class="badge">Provider actions</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn primary" id="btnRegister">Đăng ký (offer-storage)</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kết quả</label>
+          <pre class="output" id="registerResult"></pre>
+        </div>
+      </section>
+
+      <!-- Daemon Controls -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Chế độ Tự động (Daemon)</h3>
+            <div class="badge">Auto mode</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn success" id="btnStartDaemon">Khởi động</button>
+            <button class="btn danger" id="btnStopDaemon">Dừng</button>
+          </div>
+        </div>
+        <div class="field-row grid two">
+          <div class="field">
+            <label>Script path</label>
+            <input id="daemonScript" value="scripts/storage-handler.example.js" />
+          </div>
+          <div class="field">
+            <label>Min reward (lamports)</label>
+            <input id="daemonMinReward" type="number" value="0" />
+          </div>
+          <div class="field">
+            <label>Interval (ms)</label>
+            <input id="daemonInterval" type="number" value="15000" />
+          </div>
+          <div class="field full">
+            <label>Daemon logs</label>
+            <pre class="logs" id="daemonLogs"></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container">NodeLink UI • Provider</div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

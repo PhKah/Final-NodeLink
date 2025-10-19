@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NodeLink UI — Consumer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="logo">🟦</span>
+        <div>
+          <div class="brand-title">NodeLink</div>
+          <div class="brand-sub">Web UI</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="/provider.html" class="nav-item" data-tab="provider">Người Cho Thuê</a>
+        <a href="/consumer.html" class="nav-item active" data-tab="consumer">Người Thuê</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2>Người Thuê (Consumer)</h2>
+    <div class="grid">
+      <!-- Wallet Status -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Trạng thái Ví</h3>
+            <div class="badge">Wallet</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" id="btnCheckWallet">Kiểm tra ví</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kết quả</label>
+          <pre class="output" id="walletResult"></pre>
+        </div>
+      </section>
+
+      <!-- Create Contract -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Tạo Hợp Đồng</h3>
+            <div class="badge">Create contract</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn primary" id="btnCreateContract">Tạo hợp đồng</button>
+          </div>
+        </div>
+        <div class="field-row grid two">
+          <div class="field">
+            <label>Reward (lamports)</label>
+            <input id="rewardInput" type="number" value="1000000" />
+          </div>
+          <div class="field full">
+            <label>Spec JSON</label>
+            <textarea id="specInput" placeholder="{\n  \"contract\": \"storage\"\n}"></textarea>
+          </div>
+          <div class="field full">
+            <label>Kết quả</label>
+            <pre class="output" id="createResult"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contract Status -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Trạng thái Hợp Đồng</h3>
+            <div class="badge">Status</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" id="btnContractStatus">Kiểm tra trạng thái</button>
+          </div>
+        </div>
+        <div class="field-row grid two">
+          <div class="field full">
+            <label>Spec JSON</label>
+            <textarea id="statusSpecInput" placeholder="{}"></textarea>
+          </div>
+          <div class="field full">
+            <label>Kết quả</label>
+            <pre class="output" id="statusResult"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Verify Storage -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Xác minh Lưu trữ</h3>
+            <div class="badge">Verify</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" id="btnVerify">Gửi verify</button>
+          </div>
+        </div>
+        <div class="field-row grid two">
+          <div class="field full">
+            <label>Spec JSON</label>
+            <textarea id="verifySpecInput" placeholder="{}"></textarea>
+          </div>
+          <div class="field">
+            <label>Quyết định</label>
+            <div class="radio-row">
+              <label><input type="radio" name="decision" value="accept" checked /> Accept</label>
+              <label><input type="radio" name="decision" value="reject" /> Reject</label>
+            </div>
+          </div>
+          <div class="field full">
+            <label>Kết quả</label>
+            <pre class="output" id="verifyResult"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- List Contracts -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Liệt kê Hợp Đồng</h3>
+            <div class="badge">List</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" id="btnListContracts">Liệt kê</button>
+          </div>
+        </div>
+        <div class="field-row grid two">
+          <div class="field">
+            <label>Tất cả</label>
+            <label><input type="checkbox" id="listAll" /> Bao gồm tất cả</label>
+          </div>
+          <div class="field full">
+            <label>Kết quả</label>
+            <pre class="output" id="listResult"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Claim Payment -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h3>Nhận Thanh toán</h3>
+            <div class="badge">Claim</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn success" id="btnClaim">Gửi claim-payment</button>
+          </div>
+        </div>
+        <div class="field-row grid two">
+          <div class="field">
+            <label>Details Hex</label>
+            <input id="claimDetails" placeholder="0x..." />
+          </div>
+          <div class="field">
+            <label>Renter (optional)</label>
+            <input id="claimRenter" placeholder="Wallet address" />
+          </div>
+          <div class="field full">
+            <label>Kết quả</label>
+            <pre class="output" id="claimResult"></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container">NodeLink UI • Consumer</div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "title": "Example Storage Rental Contract",
+  "consumer": {
+    "name": "Sample Consumer",
+    "contact": "consumer@example.com"
+  },
+  "capacityGB": 100,
+  "durationDays": 30,
+  "redundancy": 3,
+  "pricePerDayLamports": 10000,
+  "region": "VN",
+  "encryption": "AES-256-GCM",
+  "retrievalEndpoint": "https://provider.example/download",
+  "providerRequirements": {
+    "minBandwidthMbps": 100,
+    "uptimeSLA": "99.5%",
+    "proofsPerDay": 24
+  },
+  "audit": {
+    "challengeType": "randomChunk",
+    "chunkSizeMB": 8,
+    "maxChallengeFailures": 3
+  },
+  "dataProfile": {
+    "typicalFileSizeMB": 50,
+    "maxConcurrentReads": 5,
+    "allowHotStorage": true
+  },
+  "notes": "Adjust values to your needs. The CLI will SHA-256 hash this file and use the hex as on-chain details."
+}

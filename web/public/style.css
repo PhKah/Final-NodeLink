@@ -1,0 +1,83 @@
+/* Light Theme */
+:root {
+  --bg: #f7f9fc;
+  --bg-soft: #ffffff;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #2b7cff;
+  --primary-700: #1f63d9;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+/* Header */
+.app-header { background: var(--bg-soft); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { font-size: 28px; }
+.brand-title { font-weight: 700; font-size: 18px; }
+.brand-sub { color: var(--muted); font-size: 13px; }
+
+/* Nav */
+.nav { display: flex; gap: 8px; }
+.nav-item { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; color: var(--text); cursor: pointer; }
+.nav-item.active { background: #eef2ff; border-color: #c7d2fe; }
+
+/* Sections */
+.tab { display: none; }
+.tab.active { display: block; }
+
+h2 { margin: 16px 0; font-size: 20px; }
+h3 { margin: 0; font-size: 16px; }
+
+/* Grid & Cards */
+.grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.card-actions { display: flex; gap: 8px; }
+.badge { padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 12px; background: #f8fafc; }
+
+.field-row { padding: 16px; }
+.field { padding: 16px; }
+.field label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.field input, .field textarea { width: 100%; padding: 10px 12px; background: #ffffff; color: var(--text); border: 1px solid #cbd5e1; border-radius: 10px; outline: none; }
+.field textarea { min-height: 120px; }
+.field.full { grid-column: 1 / -1; }
+.radio-row { display: flex; gap: 16px; align-items: center; }
+.spacer { height: 8px; }
+
+.actions { display: flex; gap: 8px; }
+
+/* Buttons */
+.btn { padding: 10px 14px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f8fafc; color: var(--text); cursor: pointer; font-weight: 600; }
+.btn:hover { background: #eef2f7; }
+.btn.primary { background: var(--primary); border-color: var(--primary-700); color: #fff; }
+.btn.primary:hover { background: var(--primary-700); }
+.btn.success { background: var(--success); border-color: #15803d; color: #fff; }
+.btn.success:hover { background: #15803d; }
+.btn.danger { background: var(--danger); border-color: #b91c1c; color: #fff; }
+.btn.danger:hover { background: #b91c1c; }
+
+/* Outputs */
+.output, .logs { background: #f8fafc; color: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); height: 200px; overflow-x: auto; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+.logs { height: 260px; }
+
+/* Footer */
+.app-footer { border-top: 1px solid var(--border); background: var(--bg-soft); color: var(--muted); }
+.app-footer .container { padding: 16px 24px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(30px); background: #ffffff; border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: all .25s ease; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

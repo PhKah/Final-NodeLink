@@ -1,0 +1,12 @@
+{
+  "capacityGB": 10,
+  "durationDays": 7,
+  "redundancy": 2,
+  "pricePerDayLamports": 100000,
+  "region": "any",
+  "encryption": false,
+  "retrievalEndpoint": "",
+  "providerRequirements": { "bandwidthMbps": 50, "sla": 99 },
+  "audit": { "challenge": "sha256", "chunkSize": 4096 },
+  "dataProfile": { "fileSizeMB": 100 }
+}

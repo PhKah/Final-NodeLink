@@ -1,0 +1,90 @@
+{
+  "version": "0.1.0",
+  "name": "node_link",
+  "address": "BzBmVWwhcqohg6vHZ7bNrT6nDDvNcsvbkvc6jHwSLgUK",
+  "metadata": {
+    "address": "BTFQmsP4wBPjhHPhmP5MAcY17gR4LZGMr2jx3aRSRDkU",
+    "name": "node_link",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "provider_register",
+      "discriminator": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "accounts": [
+        {
+          "name": "provider",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "provider",
+      "discriminator": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": "ProviderStatus"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "ProviderStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Available"
+          },
+          {
+            "name": "Busy"
+          }
+        ]
+      }
+    }
+  ]
+}

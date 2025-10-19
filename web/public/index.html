@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NodeLink UI</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="logo">⛓️</span>
+        <div>
+          <div class="brand-title">NodeLink</div>
+          <div class="brand-sub">Storage Rental Demo</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-tab="provider">Provider</button>
+        <button class="nav-item" data-tab="consumer">Consumer</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="tab-provider" class="tab active">
+      <h2>Provider</h2>
+      <div class="grid">
+        <!-- Wallet Status -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Trạng thái Ví</h3>
+            <div class="card-actions">
+              <button id="btnCheckWallet" class="btn">Kiểm tra ví</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Kết quả</label>
+            <pre id="walletResult" class="output"></pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Đăng ký Provider</h3>
+            <div class="card-actions">
+              <button id="btnRegister" class="btn primary">offer-storage</button>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field full">
+              <label>Kết quả</label>
+              <pre id="registerResult" class="output"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Storage Daemon</h3>
+            <div class="badge">JSON Logs</div>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label>Script path</label>
+              <input id="daemonScript" value="scripts/storage-handler.example.js" />
+            </div>
+            <div class="field">
+              <label>Min reward</label>
+              <input id="daemonMinReward" value="0" />
+            </div>
+            <div class="field">
+              <label>Interval (ms)</label>
+              <input id="daemonInterval" value="15000" />
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <div class="actions">
+                <button id="btnStartDaemon" class="btn success">Start daemon</button>
+                <button id="btnStopDaemon" class="btn danger">Stop daemon</button>
+              </div>
+            </div>
+          </div>
+          <div class="field full">
+            <label>Logs</label>
+            <pre id="daemonLogs" class="logs"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-consumer" class="tab">
+      <h2>Consumer</h2>
+      <div class="grid">
+        <!-- Wallet Status -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Trạng thái Ví</h3>
+            <div class="card-actions">
+              <button id="btnCheckWallet" class="btn">Kiểm tra ví</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Kết quả</label>
+            <pre id="walletResult" class="output"></pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Tạo hợp đồng</h3>
+            <div class="card-actions">
+              <button id="btnCreateContract" class="btn primary">create-contract</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label>Reward (lamports)</label>
+              <input id="rewardInput" value="1000000" />
+            </div>
+            <div class="field">
+              <label>Spec JSON</label>
+              <textarea id="specInput" rows="10">{
+  "capacityGB": 10,
+  "durationDays": 7,
+  "redundancy": 2,
+  "pricePerDayLamports": 100000,
+  "region": "any",
+  "encryption": false,
+  "retrievalEndpoint": "",
+  "providerRequirements": { "bandwidthMbps": 50, "sla": 99 },
+  "audit": { "challenge": "sha256", "chunkSize": 4096 },
+  "dataProfile": { "fileSizeMB": 100 }
+}</textarea>
+            </div>
+          </div>
+          <div class="field full">
+            <label>Kết quả</label>
+            <pre id="createResult" class="output"></pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Trạng thái hợp đồng</h3>
+            <div class="card-actions">
+              <button id="btnContractStatus" class="btn">contract-status</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label>Spec JSON</label>
+              <textarea id="statusSpecInput" rows="8"></textarea>
+            </div>
+            <div class="field">
+              <label>Kết quả</label>
+              <pre id="statusResult" class="output"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Xác minh lưu trữ</h3>
+            <div class="card-actions">
+              <button id="btnVerify" class="btn">verify-storage</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label>Spec JSON</label>
+              <textarea id="verifySpecInput" rows="8"></textarea>
+            </div>
+            <div class="field">
+              <label>Decision</label>
+              <div class="radio-row">
+                <label><input type="radio" name="decision" value="accept" checked /> Accept</label>
+                <label><input type="radio" name="decision" value="reject" /> Reject</label>
+              </div>
+              <div class="spacer"></div>
+              <label>Kết quả</label>
+              <pre id="verifyResult" class="output"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Liệt kê hợp đồng</h3>
+            <div class="card-actions">
+              <button id="btnListContracts" class="btn">list-contracts</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label><input type="checkbox" id="listAll" /> Bao gồm tất cả chương trình (-a)</label>
+            </div>
+            <div class="field">
+              <label>Kết quả</label>
+              <pre id="listResult" class="output"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Claim Payment</h3>
+            <div class="card-actions">
+              <button id="btnClaim" class="btn">claim-payment</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label>Details hex</label>
+              <input id="claimDetails" />
+              <label>Renter (optional)</label>
+              <input id="claimRenter" />
+            </div>
+            <div class="field">
+              <label>Kết quả</label>
+              <pre id="claimResult" class="output"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container">
+      <div>RPC và Wallet thừa hưởng từ môi trường CLI hiện tại. Bật `--log-json` đã tích hợp trong daemon khi chạy từ UI.</div>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
