@@ -12,6 +12,7 @@ Tài liệu này định nghĩa các nguyên tắc và thành phần cốt lõi,
 4.  **Minh bạch On-chain:** Các trạng thái quan trọng nhất (node nào đang online, job nào đang chạy, tiền đã được trả chưa) phải được ghi nhận và có thể xác minh trên blockchain.
 5.  **Giao diện là CLI:** Tương tác của cả Provider và Consumer sẽ được thực hiện qua giao diện dòng lệnh (CLI) để tối ưu thời gian phát triển.
 6.  **Nền tảng là Solana:** Toàn bộ logic on-chain sẽ được xây dựng trên blockchain **Solana**, sử dụng **Anchor framework**. Môi trường mục tiêu cho hackathon là **Devnet**.
+7.  **Tận dụng Lưu trữ Off-chain:** Đối với các dữ liệu lớn (chi tiết job, kết quả), hệ thống sẽ sử dụng các giải pháp lưu trữ phi tập trung như IPFS. Logic on-chain chỉ lưu trữ các "con trỏ" (ví dụ: CID) tới dữ liệu này để tối ưu chi phí và hiệu năng.
 
 ---
 

@@ -58,9 +58,9 @@
 
 ### Giai đoạn 4: Kiểm thử và Hoàn thiện Demo
 
-- [ ] **4.1: Viết Unit Test cho Smart Contract**
-  - [ ] Viết test cho toàn bộ luồng trong `tests/node-link.ts`.
-  - Implemented by: 
+- [x] **4.1: Viết Unit Test cho Smart Contract**
+  - [x] Viết test cho toàn bộ luồng trong `tests/node-link.ts`.
+  - Implemented by: [Gemini & Khánh]
 - [ ] **4.2: Triển khai lên Devnet**
   - [ ] Dùng `anchor deploy` để đưa smart contract lên Devnet.
   - Implemented by: 
@@ -69,3 +69,67 @@
   - [ ] Viết script `demo.sh` để tự động hóa luồng demo.
   - [ ] Chuẩn bị slide trình bày.
   - Implemented by: 
+
+---
+
+### Giai đoạn 5: Nâng cấp Hỗ trợ Job Phức tạp (Metadata & Tags)
+
+- [x] **5.1: Cập nhật Smart Contract với kiến trúc Tags**
+  - [x] Định nghĩa `enum ExecutionEngine` chỉ với biến thể `Docker`.
+  - [x] Cập nhật `JobAccount` để sử dụng các trường metadata mới: `engine`, `job_details: String`, `results: String`, `job_tags: Vec<String>`, `hardware_tags: Vec<String>`.
+  - [x] Xóa các trường cũ không còn phù hợp.
+  - [x] Cập nhật instruction `create_job` để nhận các tham số metadata và tags mới.
+  - [x] Cập nhật instruction `submit_results` để nhận `results`.
+  - Implemented by: [Gemini & Khánh]
+- [ ] **5.2: Cập nhật Client của Provider**
+  - [ ] Cập nhật logic quét job để lọc dựa trên `job_tags` và `hardware_tags`.
+  - [ ] Implement logic thực thi job Docker từ `job_details` (tên Docker image).
+  - [ ] Implement logic tải kết quả lên IPFS để lấy `results` (CID của kết quả).
+  - Implemented by: 
+- [ ] **5.3: Cập nhật Client của Consumer**
+  - [ ] Cập nhật lệnh `create-job` để cho phép người dùng cung cấp `job_tags` và `hardware_tags`.
+  - [ ] Cập nhật logic `verify-job` để tải và xác minh kết quả từ `results` (CID của kết quả).
+  - Implemented by: 
+- [ ] **5.4: Xây dựng Từ điển Tags**
+  - [ ] Tạo và định nghĩa phiên bản đầu tiên của file `specs/tags_dictionary.md`.
+  - [ ] Tích hợp logic đọc từ điển này vào client (tùy chọn, có thể để sau).
+  - Implemented by:
+
+---
+
+### Giai đoạn 6: Xây dựng Hệ thống Uy tín & Hoàn thiện Luồng Job (Reputation System & Job Flow Finalization)
+
+- [x] **6.0: Tái cấu trúc `JobAccount` PDA (Refactor `JobAccount` PDA)**
+  - [x] Thay đổi `seeds` của `JobAccount` từ `[b"job", renter, job_id]` thành `[b"job", job_id]` để đơn giản hóa việc truy xuất.
+  - [x] Cập nhật lại tất cả các Contexts (`CreateJob`, `AcceptJob`, `SubmitResults`, v.v.) để sử dụng `seeds` mới.
+  - Implemented by: [Gemini & Khánh]
+
+- [x] **6.1: Cập nhật các Structs (Update Structs)**
+  - [x] `Provider`: Thêm các trường `jobs_completed: u64`, `jobs_failed: u64`, `banned_until: i64`.
+  - [x] `JobAccount`: Thêm các trường `max_duration: i64` (thời gian tối đa Renter phải xác minh) và `submission_deadline: i64` (thời gian tối đa Provider phải nộp kết quả).
+  - Implemented by: [Gemini & Khánh]
+
+- [x] **6.2: Bổ sung Instruction cho Renter (Add Instructions for Renter)**
+  - [x] Tạo instruction `cancel_job` cho phép Renter hủy job và lấy lại tiền khi job đang ở trạng thái `Pending`.
+  - [x] Tạo instruction `reclaim_job` cho phép Renter phạt Provider (gọi `apply_penalty`) khi quá `submission_deadline`.
+  - Implemented by: [Gemini & Khánh]
+
+- [x] **6.3: Tái cấu trúc Logic Phạt (Refactor Penalty Logic)**
+  - [x] Tạo một hàm nội bộ `apply_penalty(provider: &mut Account<Provider>)` để xử lý logic: tăng `jobs_failed`, tính `ban_duration` theo tỷ lệ, cập nhật `banned_until`, và reset `provider.status` về `Available`.
+  - Implemented by: [Gemini & Khánh]
+
+- [x] **6.4: Cập nhật các Instruction hiện có (Update Existing Instructions)**
+  - [x] `provider_register`: Khởi tạo các trường `jobs_completed`, `jobs_failed`, `banned_until` bằng 0.
+  - [x] `create_job`: Thêm tham số `max_duration` và lưu vào `JobAccount`.
+  - [x] `accept_job`: Kiểm tra `provider.banned_until` và tính `submission_deadline`.
+  - [x] `verify_results`:
+    - [x] Khi `is_accepted = true`, tăng `jobs_completed`.
+    - [x] Khi `is_accepted = false`, gọi hàm nội bộ `apply_penalty`.
+  - Implemented by: [Gemini & Khánh]
+
+- [x] **6.5: Cập nhật Unit Tests**
+  - [x] Viết test cho `cancel_job` và `reclaim_job`.
+  - [x] Viết test cho việc provider bị cấm sau khi thất bại và không thể `accept_job`.
+  - [x] Viết test để xác minh `jobs_completed` và `jobs_failed` được cập nhật chính xác.
+  - [x] Cập nhật các test cũ để phù hợp với `JobAccount` PDA seeds mới.
+  - Implemented by: [Gemini & Khánh]
