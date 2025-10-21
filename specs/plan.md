@@ -1,31 +1,31 @@
 # Kế hoạch tổng thể dự án NodeLink (MVP cho Hackathon)
 
-Dự án sẽ được chia thành 4 giai đoạn chính để hoàn thành sản phẩm MVP. Chi tiết các công việc (tasks) cụ thể được theo dõi tại file `tasks.md`.
+Dự án sẽ được chia thành các giai đoạn chính để hoàn thành sản phẩm MVP. Chi tiết các công việc (tasks) cụ thể được theo dõi tại file `tasks.md`.
 
 ---
 
-### **Giai đoạn 1: Xây dựng Smart Contract (On-chain Program)**
-*   **Mục tiêu:** Tạo ra bộ logic cốt lõi trên Solana Devnet để quản lý node, tác vụ (job) và thanh toán an toàn.
+### **Giai đoạn 0: Tự động hóa Triển khai (Deployment Automation)**
+*   **Mục tiêu:** Đảm bảo chương trình on-chain luôn ở trạng thái sẵn sàng hoạt động ngay sau khi deploy bằng cách tự động hóa các tác vụ thiết lập ban đầu.
 
 ---
 
-### **Giai đoạn 2: Phát triển Node Client (Off-chain)**
-*   **Mục tiêu:** Tạo ra một ứng dụng CLI cho phép người dùng (provider) kết nối máy tính của họ vào mạng lưới để cung cấp tài nguyên tính toán.
+### **Giai đoạn 1: Xây dựng Smart Contract & Logic On-chain**
+*   **Mục tiêu:** Tạo ra bộ logic cốt lõi trên Solana Devnet để quản lý node, tác vụ (job), thanh toán và hệ thống uy tín.
 
 ---
 
-### **Giai đoạn 3: Phát triển Giao diện cho Người dùng (Consumer)**
-*   **Mục tiêu:** Tạo ra một ứng dụng CLI cho phép người dùng (consumer) gửi tác vụ tính toán và xác minh kết quả.
+### **Giai đoạn 2: Phát triển Client cho Provider (Web + CLI)**
+*   **Mục tiêu:** Cung cấp giao diện web để đăng ký và một ứng dụng CLI (daemon) để Provider tự động xử lý công việc.
+
+---
+
+### **Giai đoạn 3: Phát triển Client cho Consumer (Web)**
+*   **Mục tiêu:** Xây dựng một giao diện web hoàn chỉnh cho người dùng (Consumer/Renter) thuê tài nguyên tính toán.
 
 ---
 
 ### **Giai đoạn 4: Kiểm thử và Hoàn thiện Demo**
 *   **Mục tiêu:** Đảm bảo toàn bộ hệ thống hoạt động trơn tru, triển khai lên Devnet và chuẩn bị một kịch bản demo hoàn chỉnh.
-
----
-
-### **Giai đoạn 5: Xây dựng Hệ thống Uy tín (Reputation System)**
-*   **Mục tiêu:** Xây dựng một cơ chế phạt tự động để tăng cường tính tin cậy của mạng lưới. Provider sẽ bị cấm nhận việc trong một khoảng thời gian nếu có hành vi không tốt, dựa trên tỷ lệ thất bại của họ. Cơ chế này được thiết kế để giữ sự đơn giản tối đa cho Renter.
 
 ---
 
@@ -50,3 +50,15 @@ Phần này làm rõ kiến trúc thực thi công việc đã được nâng c�
 
 *   **Giai đoạn đầu (Tập trung vào Docker):** Hệ thống sẽ ưu tiên hỗ trợ `ExecutionEngine::Docker` là engine thực thi đầu tiên. Trường `job_details` sẽ chứa tên của Docker image.
 *   **Giai đoạn tương lai (Mở rộng):** Kiến trúc này cho phép dễ dàng mở rộng để hỗ trợ các engine khác như `Wasm` trong tương lai bằng cách thêm biến thể mới vào `enum ExecutionEngine`.
+
+---
+
+### **Nguyên tắc Phát triển Client (Client Development Principles)**
+
+Phần này ghi lại các nguyên tắc cốt lõi khi xây dựng ứng dụng client (CLI, frontend) để tương tác với chương trình Anchor.
+
+1.  **IDL là trung tâm:** Luôn sử dụng file IDL (JSON) do `anchor build` tạo ra làm "nguồn chân lý" (source of truth) cho API của chương trình.
+2.  **Tái sử dụng Provider:** Tạo một `AnchorProvider` có thể tái sử dụng để đóng gói `connection` (kết nối mạng Solana) và `wallet` (ví người dùng).
+3.  **Khởi tạo `Program` một lần:** Khởi tạo một đối tượng `Program` duy nhất bằng IDL và Provider để tương tác với smart contract.
+4.  **Sử dụng `program.methods`:** Dùng `program.methods.instructionName()` để xây dựng và gọi các instruction một cách an toàn và rõ ràng.
+5.  **Sử dụng `program.account`:** Dùng `program.account.accountName.fetch()` hoặc `.all()` để truy vấn và giải mã (deserialize) dữ liệu của các account on-chain.

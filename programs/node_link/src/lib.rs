@@ -64,10 +64,12 @@ pub mod node_link {
         Ok(())
     }
 
-    pub fn provider_register(ctx: Context<ProviderAccount>) -> Result<()> {
+    pub fn provider_register(ctx: Context<ProviderAccount>, job_tags: String, hardware_config: String) -> Result<()> {
         ctx.accounts.provider.set_inner(Provider {
             authority: ctx.accounts.authority.key(),
             status: ProviderStatus::Available,
+            supported_job_tags: job_tags,
+            hardware_config: hardware_config,
             jobs_completed: 0,
             jobs_failed: 0,
             banned_until: 0,
@@ -239,6 +241,10 @@ pub struct JobCounter {
 pub struct Provider {
     pub authority: Pubkey,
     pub status: ProviderStatus,
+    #[max_len(100)]
+    pub supported_job_tags: String,
+    #[max_len(100)]
+    pub hardware_config: String,
     pub jobs_completed: u64,
     pub jobs_failed: u64,
     pub banned_until: i64,

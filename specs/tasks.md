@@ -4,6 +4,15 @@
 
 ---
 
+### Giai đoạn 0: Tự động hóa Triển khai (Deployment Automation)
+
+- [x] **0.1: Cập nhật Script Deploy**
+  - [x] Thêm logic vào `migrations/deploy.ts` để tự động gọi instruction `initializeCounter`.
+  - [x] Đảm bảo `JobCounter` PDA được tạo ra một cách an toàn, chỉ một lần duy nhất sau khi deploy.
+  - Implemented by: [Gemini & Khánh]
+
+---
+
 ### Giai đoạn 1: Xây dựng Smart Contract (On-chain Program)
 
 - [x] **1.1: Khởi tạo và Cấu trúc chương trình Anchor**
@@ -31,27 +40,35 @@
 
 ---
 
-### Giai đoạn 2: Phát triển Node Client (Off-chain)
+### Giai đoạn 2: Phát triển Client cho Provider (Web + CLI)
 
-- [ ] **2.1: Thiết lập môi trường Client**
-  - [ ] Cài đặt `@solana/web3.js`, `@project-serum/anchor`.
+- [ ] **2.1: Xây dựng Nền tảng Client**
+  - [ ] Tạo thư mục `client/` và file `client/common.ts`.
+  - [ ] Viết các hàm tái sử dụng để kết nối mạng Solana, tải ví và khởi tạo đối tượng `program`.
   - Implemented by: 
-- [ ] **2.2: Xây dựng Chức năng cho Provider (Node Client)**
-  - [ ] Tạo CLI command `node-link register` để đăng ký node.
-  - [ ] Xây dựng tiến trình nền (`daemon`) với các chức năng:
-    - [ ] Tự động quét blockchain để tìm job mới phù hợp tiêu chí (ví dụ: reward).
-    - [ ] Tự động gọi `accept_job` để nhận việc.
-    - [ ] Tự động thực thi tác vụ (ví dụ: chạy một script được chỉ định).
-    - [ ] Tự động gọi `submit_result` sau khi hoàn thành.
+- [ ] **2.2: Xây dựng Giao diện Đăng ký (Web)**
+  - [ ] Thiết lập dự án React trong thư mục `app/`.
+  - [ ] Cài đặt và cấu hình `@solana/wallet-adapter`.
+  - [ ] Xây dựng giao diện cho phép Provider kết nối ví, nhập `tags` và gọi instruction `providerRegister`.
+  - Implemented by: 
+- [ ] **2.3: Xây dựng Daemon `listen` (CLI)**
+  - [ ] Tạo file `client/provider-cli.ts`.
+  - [ ] Implement vòng lặp `listen` để tự động quét và nhận job từ on-chain dựa trên `status` và `tags`.
+  - [ ] Giả lập quá trình thực thi và tự động gọi `submit_results`.
   - Implemented by: 
 
 ---
 
-### Giai đoạn 3: Phát triển Giao diện cho Người dùng (Consumer)
+### Giai đoạn 3: Phát triển Client cho Consumer (Web)
 
-- [ ] **3.1: Xây dựng Chức năng cho Consumer**
-  - [ ] Tạo CLI command `node-link create-job`.
-  - [ ] Tạo CLI command `node-link verify-job` để xác minh và giải phóng thanh toán.
+- [ ] **3.1: Xây dựng Giao diện Tạo Job**
+  - [ ] Mở rộng ứng dụng React với trang "Create Job".
+  - [ ] Xây dựng form cho phép người dùng nhập thông tin job và gọi instruction `createJob`.
+  - Implemented by: 
+- [ ] **3.2: Xây dựng Dashboard Quản lý Job**
+  - [ ] Xây dựng trang "My Jobs" để liệt kê các job đã tạo của người dùng.
+  - [ ] Hiển thị trạng thái (`status`) của từng job.
+  - [ ] Thêm các nút bấm để gọi `verifyResults`, `cancel_job`, `reclaim_job`.
   - Implemented by: 
 
 ---
@@ -62,11 +79,11 @@
   - [x] Viết test cho toàn bộ luồng trong `tests/node-link.ts`.
   - Implemented by: [Gemini & Khánh]
 - [ ] **4.2: Triển khai lên Devnet**
-  - [ ] Dùng `anchor deploy` để đưa smart contract lên Devnet.
+  - [ ] Dùng `anchor deploy` để đưa smart contract và chạy script `migrations/deploy.ts` lên Devnet.
   - Implemented by: 
 - [ ] **4.3: Xây dựng Kịch bản Demo End-to-End**
-  - [ ] Chuẩn bị 2 terminal mô phỏng Provider và Consumer.
-  - [ ] Viết script `demo.sh` để tự động hóa luồng demo.
+  - [ ] Chuẩn bị kịch bản demo bao gồm cả giao diện web và CLI daemon.
+  - [ ] Viết script `demo.sh` (tùy chọn) để tự động hóa luồng demo.
   - [ ] Chuẩn bị slide trình bày.
   - Implemented by: 
 
@@ -97,39 +114,18 @@
 
 ---
 
-### Giai đoạn 6: Xây dựng Hệ thống Uy tín & Hoàn thiện Luồng Job (Reputation System & Job Flow Finalization)
+### Giai đoạn 6: Xây dựng Hệ thống Uy tín (Reputation System)
 
-- [x] **6.0: Tái cấu trúc `JobAccount` PDA (Refactor `JobAccount` PDA)**
-  - [x] Thay đổi `seeds` của `JobAccount` từ `[b"job", renter, job_id]` thành `[b"job", job_id]` để đơn giản hóa việc truy xuất.
-  - [x] Cập nhật lại tất cả các Contexts (`CreateJob`, `AcceptJob`, `SubmitResults`, v.v.) để sử dụng `seeds` mới.
+- [x] **6.1: Cập nhật `Provider` Account**
+  - [x] Thêm các trường `jobs_completed: u64`, `jobs_failed: u64`, `banned_until: i64` vào struct `Provider`.
   - Implemented by: [Gemini & Khánh]
-
-- [x] **6.1: Cập nhật các Structs (Update Structs)**
-  - [x] `Provider`: Thêm các trường `jobs_completed: u64`, `jobs_failed: u64`, `banned_until: i64`.
-  - [x] `JobAccount`: Thêm các trường `max_duration: i64` (thời gian tối đa Renter phải xác minh) và `submission_deadline: i64` (thời gian tối đa Provider phải nộp kết quả).
+- [x] **6.2: Cập nhật Logic Xử lý Job để áp dụng hình phạt**
+  - [x] Sửa đổi instruction `verify_results`:
+    - [x] Khi `is_accepted = true`, tăng `provider.jobs_completed`.
+    - [x] Khi `is_accepted = false`, tăng `provider.jobs_failed` và tính toán `ban_duration` dựa trên tỷ lệ thất bại, sau đó cập nhật `provider.banned_until`.
+  - [x] Sửa đổi instruction `accept_job` để kiểm tra `banned_until` và từ chối nếu provider đang bị cấm.
   - Implemented by: [Gemini & Khánh]
-
-- [x] **6.2: Bổ sung Instruction cho Renter (Add Instructions for Renter)**
-  - [x] Tạo instruction `cancel_job` cho phép Renter hủy job và lấy lại tiền khi job đang ở trạng thái `Pending`.
-  - [x] Tạo instruction `reclaim_job` cho phép Renter phạt Provider (gọi `apply_penalty`) khi quá `submission_deadline`.
-  - Implemented by: [Gemini & Khánh]
-
-- [x] **6.3: Tái cấu trúc Logic Phạt (Refactor Penalty Logic)**
-  - [x] Tạo một hàm nội bộ `apply_penalty(provider: &mut Account<Provider>)` để xử lý logic: tăng `jobs_failed`, tính `ban_duration` theo tỷ lệ, cập nhật `banned_until`, và reset `provider.status` về `Available`.
-  - Implemented by: [Gemini & Khánh]
-
-- [x] **6.4: Cập nhật các Instruction hiện có (Update Existing Instructions)**
-  - [x] `provider_register`: Khởi tạo các trường `jobs_completed`, `jobs_failed`, `banned_until` bằng 0.
-  - [x] `create_job`: Thêm tham số `max_duration` và lưu vào `JobAccount`.
-  - [x] `accept_job`: Kiểm tra `provider.banned_until` và tính `submission_deadline`.
-  - [x] `verify_results`:
-    - [x] Khi `is_accepted = true`, tăng `jobs_completed`.
-    - [x] Khi `is_accepted = false`, gọi hàm nội bộ `apply_penalty`.
-  - Implemented by: [Gemini & Khánh]
-
-- [x] **6.5: Cập nhật Unit Tests**
-  - [x] Viết test cho `cancel_job` và `reclaim_job`.
-  - [x] Viết test cho việc provider bị cấm sau khi thất bại và không thể `accept_job`.
-  - [x] Viết test để xác minh `jobs_completed` và `jobs_failed` được cập nhật chính xác.
-  - [x] Cập nhật các test cũ để phù hợp với `JobAccount` PDA seeds mới.
+- [x] **6.3: Cập nhật Unit Tests**
+  - [x] Viết test case cho việc provider bị cấm sau khi thất bại.
+  - [x] Viết test case để xác minh `jobs_completed` và `jobs_failed` được cập nhật chính xác.
   - Implemented by: [Gemini & Khánh]

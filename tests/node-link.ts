@@ -71,9 +71,11 @@ describe("node-link", () => {
       }
     }
 
-    // Register both providers
+    // Register both providers with their capabilities
+    const provider1_job_tags = "ai_training,3d_rendering";
+    const provider1_hardware = "gpu,gpu_vram_16gb,ram_32gb";
     await program.methods
-      .providerRegister()
+      .providerRegister(provider1_job_tags, provider1_hardware)
       .accounts({
         provider: providerAccountPda,
         authority: providerAuthority.publicKey,
@@ -81,10 +83,12 @@ describe("node-link", () => {
       })
       .signers([providerAuthority])
       .rpc();
-    console.log(`Provider 1 ${providerAuthority.publicKey.toBase58()} registered.`);
+    console.log(`Provider 1 ${providerAuthority.publicKey.toBase58()} registered with tags.`);
 
+    const provider2_job_tags = "data_analysis";
+    const provider2_hardware = "cpu_multicore,ram_16gb";
     await program.methods
-      .providerRegister()
+      .providerRegister(provider2_job_tags, provider2_hardware)
       .accounts({
         provider: providerAccountPda2,
         authority: providerAuthority2.publicKey,
@@ -92,7 +96,7 @@ describe("node-link", () => {
       })
       .signers([providerAuthority2])
       .rpc();
-    console.log(`Provider 2 ${providerAuthority2.publicKey.toBase58()} registered.`);
+    console.log(`Provider 2 ${providerAuthority2.publicKey.toBase58()} registered with tags.`);
   });
 
   describe("Happy Path Full Job Lifecycle", () => {
@@ -116,7 +120,7 @@ describe("node-link", () => {
       const max_duration = new BN(60); // 60 seconds for the job
 
       await program.methods
-        .createJob(reward, { docker: {} }, "test-job-tags", "test-hardware-tags", max_duration)
+        .createJob(reward, { docker: {} }, "3d_rendering", "gpu,ram_32gb", max_duration)
         .accounts({
           jobAccount: jobAccountPda,
           escrow: escrowPda,
@@ -261,7 +265,7 @@ describe("node-link", () => {
     });
 
     it("should allow the renter to reclaim a timed-out job", async () => {
-      const shortJobDuration = new BN(2); // 2 seconds
+            const shortJobDuration = new BN(0); // 0 seconds to make it timeout instantly
       const counterAccount = await program.account.jobCounter.fetch(counterPda);
       const reclaimJobId = counterAccount.count;
 
