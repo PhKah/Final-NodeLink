@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { NodeLink } from "../target/types/node_link";
+import { NodeLink } from "../target/types/node_link.js";
 
 module.exports = async function (provider: anchor.AnchorProvider) {
   anchor.setProvider(provider);
