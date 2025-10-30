@@ -7,12 +7,13 @@ Tài liệu này định nghĩa các nguyên tắc và thành phần cốt lõi,
 ## Nguyên tắc chỉ đạo
 
 1.  **Tập trung vào Luồng End-to-End:** Ưu tiên hàng đầu là hoàn thành một luồng trình diễn hoàn chỉnh: **Gửi Job -> Xử lý -> Xác minh -> Thanh toán**.
-2.  **Đơn giản là Tối thượng:** Mọi thành phần phải được xây dựng ở mức độ đơn giản nhất có thể để chứng minh khái niệm. Các tính năng phức tạp (ví dụ: sandbox bảo mật, matching layer nâng cao) sẽ được để lại cho các giai đoạn sau.
+2.  **Đơn giản là Tối thượng:** Mọi thành phần phải được xây dựng ở mức độ đơn giản nhất có thể để chứng minh khái niệm. Các tính năng phức tạp sẽ được để lại cho các giai đoạn sau.
 3.  **Tự động hóa cho Provider:** Client của Provider phải được thiết kế như một tiến trình nền tự động (`set it and forget it`), cho phép khai thác tài nguyên rảnh rỗi một cách hiệu quả mà không cần sự can thiệp thủ công.
 4.  **Minh bạch On-chain:** Các trạng thái quan trọng nhất (node nào đang online, job nào đang chạy, tiền đã được trả chưa) phải được ghi nhận và có thể xác minh trên blockchain.
-5.  **Giao diện là CLI:** Tương tác của cả Provider và Consumer sẽ được thực hiện qua giao diện dòng lệnh (CLI) để tối ưu thời gian phát triển.
+5.  **Giao diện là CLI:** Tương tác ban đầu của cả Provider và Consumer sẽ được thực hiện qua giao diện dòng lệnh (CLI) để tối ưu thời gian phát triển.
 6.  **Nền tảng là Solana:** Toàn bộ logic on-chain sẽ được xây dựng trên blockchain **Solana**, sử dụng **Anchor framework**. Môi trường mục tiêu cho hackathon là **Devnet**.
-7.  **Tận dụng Lưu trữ Off-chain:** Đối với các dữ liệu lớn (chi tiết job, kết quả), hệ thống sẽ sử dụng các giải pháp lưu trữ phi tập trung như IPFS. Logic on-chain chỉ lưu trữ các "con trỏ" (ví dụ: CID) tới dữ liệu này để tối ưu chi phí và hiệu năng.
+7.  **Ưu tiên Sandbox di động (Wasm-first):** Môi trường thực thi job phải được ưu tiên dựa trên công nghệ **WebAssembly (Wasm)**. Lựa chọn này nhằm đảm bảo tính an toàn, di động, và quan trọng nhất là loại bỏ gánh nặng cấu hình cho Provider, hiện thực hóa triết lý "set it and forget it".
+8.  **Tận dụng Lưu trữ Off-chain:** Đối với các dữ liệu lớn (logic thực thi, chi tiết job, kết quả), hệ thống sẽ sử dụng các giải pháp lưu trữ phi tập trung như IPFS. Logic on-chain chỉ lưu trữ các "con trỏ" (ví dụ: CID) tới dữ liệu này để tối ưu chi phí và hiệu năng.
 
 ---
 
@@ -25,7 +26,7 @@ Chương trình phải cung cấp các chức năng cơ bản sau:
 -   **[Cần có] Đăng ký Node:** Cho phép các máy tính (nodes) đăng ký, hủy đăng ký và cập nhật trạng thái (`Available`, `Busy`) trên mạng lưới.
 -   **[Cần có] Đăng tải Job:** Cho phép người dùng gửi một tác vụ (job) kèm theo một khoản thanh toán được khóa trong một tài khoản tạm giữ (escrow).
 -   **[Cần có] Xác minh & Thanh toán (Proof-of-Compute):**
-    -   Cho phép node đã hoàn thành gửi lại "bằng chứng công việc" (ví dụ: hash của kết quả).
+    -   Cho phép node đã hoàn thành gửi lại "bằng chứng công việc" (ví dụ: CID của kết quả).
     -   Cho phép người gửi job xác minh bằng chứng đó. Nếu hợp lệ, thanh toán sẽ được tự động chuyển từ escrow cho node.
 
 ### 2. Ứng dụng Off-chain (Client-side)
@@ -34,11 +35,11 @@ Phải có hai kịch bản sử dụng CLI riêng biệt:
 
 -   **[Cần có] CLI cho Provider (Người cho thuê):**
     -   Lệnh để `register` node của họ.
-    -   Một tiến trình nền tự động để `listen` (lắng nghe) và nhận các job phù hợp.
-    -   Logic để `execute` (thực thi) job và `submit` (gửi) kết quả hash lên on-chain.
+    -   Một tiến trình nền tự động (`daemon`) để `listen` (lắng nghe) và tự động nhận các job phù hợp.
+    -   Logic để `execute` (thực thi) job một cách an toàn bằng Wasm runtime và `submit` (gửi) CID kết quả lên on-chain.
 
 -   **[Cần có] CLI cho Consumer (Người thuê):**
-    -   Lệnh để `create` một job mới và gửi tiền vào escrow.
+    -   Lệnh để `create` một job mới (đóng gói logic Wasm và dữ liệu) và gửi tiền vào escrow.
     -   Lệnh để `verify` kết quả sau khi job hoàn thành để giải phóng thanh toán.
 
 ---

@@ -42,20 +42,24 @@
 
 ### Giai đoạn 2: Phát triển Client cho Provider (Web + CLI)
 
-- [ ] **2.1: Xây dựng Nền tảng Client**
-  - [ ] Tạo thư mục `client/` và file `client/common.ts`.
-  - [ ] Viết các hàm tái sử dụng để kết nối mạng Solana, tải ví và khởi tạo đối tượng `program`.
-  - Implemented by: 
+- [x] **2.1: Xây dựng Nền tảng Client**
+  - [x] Tạo thư mục `client/` và các file helper.
+  - [x] Viết các hàm tái sử dụng để kết nối mạng Solana, tải ví và khởi tạo đối tượng `program`.
+  - Implemented by: [Gemini & Khánh]
 - [ ] **2.2: Xây dựng Giao diện Đăng ký (Web)**
   - [ ] Thiết lập dự án React trong thư mục `app/`.
   - [ ] Cài đặt và cấu hình `@solana/wallet-adapter`.
-  - [ ] Xây dựng giao diện cho phép Provider kết nối ví, nhập `tags` và gọi instruction `providerRegister`.
+  - [ ] Xây dựng giao diện cho phép Provider kết nối ví và đăng ký.
   - Implemented by: 
-- [ ] **2.3: Xây dựng Daemon `listen` (CLI)**
-  - [ ] Tạo file `client/provider-cli.ts`.
-  - [ ] Implement vòng lặp `listen` để tự động quét và nhận job từ on-chain dựa trên `status` và `tags`.
-  - [ ] Giả lập quá trình thực thi và tự động gọi `submit_results`.
-  - Implemented by: 
+- [x] **2.3: Xây dựng Daemon `listen` (CLI) - (Task 7.0)**
+  - [x] Implement vòng lặp `listen` để quét và chấp nhận job.
+  - [x] Tải thư mục job từ IPFS dựa trên `job_details_cid`.
+  - [x] Đọc và phân tích `manifest.json` để lấy thông tin thực thi.
+  - [x] Tích hợp Wasm runtime (`@wasmer/sdk`) với WASI để thực thi job an toàn.
+  - [x] Tạo "Gói Kết quả" chuẩn (gồm `stdout.txt`, `stderr.txt`, và output chính).
+  - [x] Tải "Gói Kết quả" lên IPFS và gửi lại CID kết quả lên blockchain.
+  - [x] Tham khảo chi tiết tại: `activities/7.0_Wasm_Execution_Engine.md`.
+  - Implemented by: [Gemini & Khánh]
 
 ---
 
@@ -63,11 +67,15 @@
 
 - [ ] **3.1: Xây dựng Giao diện Tạo Job**
   - [ ] Mở rộng ứng dụng React với trang "Create Job".
-  - [ ] Xây dựng form cho phép người dùng nhập thông tin job và gọi instruction `createJob`.
+  - [ ] Xây dựng form cho phép người dùng tải lên file Wasm, file input và nhập các tham số.
+  - [ ] **Client tự động tạo file `manifest.json` từ input của người dùng.**
+  - [ ] **Client tự động tải thư mục job (gồm manifest, wasm, input) lên IPFS để lấy CID.**
+  - [ ] Gọi instruction `createJob` với CID nhận được.
   - Implemented by: 
 - [ ] **3.2: Xây dựng Dashboard Quản lý Job**
   - [ ] Xây dựng trang "My Jobs" để liệt kê các job đã tạo của người dùng.
   - [ ] Hiển thị trạng thái (`status`) của từng job.
+  - [ ] Cho phép tải về và xem "Gói Kết quả" (bao gồm cả `stdout.txt`, `stderr.txt`).
   - [ ] Thêm các nút bấm để gọi `verifyResults`, `cancel_job`, `reclaim_job`.
   - Implemented by: 
 
@@ -92,19 +100,18 @@
 ### Giai đoạn 5: Nâng cấp Hỗ trợ Job Phức tạp (Metadata & Tags)
 
 - [x] **5.1: Cập nhật Smart Contract với kiến trúc Tags**
-  - [x] Định nghĩa `enum ExecutionEngine` chỉ với biến thể `Docker`.
+  - [x] Định nghĩa `enum ExecutionEngine` chỉ với biến thể `Docker`. (Lưu ý: Chiến lược đã được cập nhật, Wasm hiện là ưu tiên số 1).
   - [x] Cập nhật `JobAccount` để sử dụng các trường metadata mới: `engine`, `job_details: String`, `results: String`, `job_tags: Vec<String>`, `hardware_tags: Vec<String>`.
   - [x] Xóa các trường cũ không còn phù hợp.
   - [x] Cập nhật instruction `create_job` để nhận các tham số metadata và tags mới.
   - [x] Cập nhật instruction `submit_results` để nhận `results`.
   - Implemented by: [Gemini & Khánh]
 - [ ] **5.2: Cập nhật Client của Provider**
-  - [ ] Cập nhật logic quét job để lọc dựa trên `job_tags` và `hardware_tags`.
-  - [ ] Implement logic thực thi job Docker từ `job_details` (tên Docker image).
-  - [ ] Implement logic tải kết quả lên IPFS để lấy `results` (CID của kết quả).
-  - Implemented by: 
+  - [ ] Cập nhật logic quét job trong `provider-cli` để lọc dựa trên `job_tags` và `hardware_tags`.
+  - [x] Implement logic thực thi job Wasm theo `manifest.json` (đã hoàn thành trong Task 7.0).
+  - Implemented by: [Gemini & Khánh]
 - [ ] **5.3: Cập nhật Client của Consumer**
-  - [ ] Cập nhật lệnh `create-job` để cho phép người dùng cung cấp `job_tags` và `hardware_tags`.
+  - [ ] Cập nhật giao diện/lệnh `create-job` để cho phép người dùng cung cấp các CID cho module Wasm, model (nếu có), và dữ liệu đầu vào.
   - [ ] Cập nhật logic `verify-job` để tải và xác minh kết quả từ `results` (CID của kết quả).
   - Implemented by: 
 - [ ] **5.4: Xây dựng Từ điển Tags**

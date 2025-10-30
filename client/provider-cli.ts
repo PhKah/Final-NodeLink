@@ -2,86 +2,198 @@ import { Command } from "commander";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
 import type { NodeLink } from "../target/types/node_link.js";
-import * as fs from "fs";
-import os from "os";
+import * as fs from "fs/promises";
+import * as os from "os";
+import * as path from "path";
+import { create, globSource } from 'kubo-rpc-client';
+import { init, Wasmer } from "@wasmer/sdk";
+import { WASI } from "@wasmer/wasi";
+import { extract } from 'it-tar';
 // @ts-ignore
 import toml from 'toml';
 
-// --- Merged from common.ts ---
+type ExecutionResult = {
+    outputPath: string;
+    stdout: string;
+    stderr: string;
+};
+
+// --- IPFS Helpers ---
+async function downloadJobDirectory(cid: string): Promise<string> {
+    console.log(`   [IPFS] Creating IPFS client...`);
+    const ipfs = create();
+
+    console.log(`   [IPFS] Creating temporary directory...`);
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nodelink-job-'));
+    console.log(`   [IPFS] Job directory created`);
+
+    console.log(`   [IPFS] Getting TAR stream for CID: ${cid}`);
+    const tarStream = ipfs.get(cid);
+
+    let fileCount = 0;
+    for await (const entry of extract()(tarStream)) {
+        const fullPath = path.join(tempDir, entry.header.name);
+
+        if (entry.header.type === 'directory') {
+            await fs.mkdir(fullPath, { recursive: true });
+        } else {
+            await fs.mkdir(path.dirname(fullPath), { recursive: true });
+
+            const content = [];
+            for await (const chunk of entry.body) {
+                content.push(chunk);
+            }
+            await fs.writeFile(fullPath, Buffer.concat(content));
+            fileCount++;
+        }
+    }
+
+    console.log(`   [IPFS] Successfully extracted ${fileCount} file(s).`);
+    return tempDir;
+}
+
+async function uploadToIpfs(directoryPath: string): Promise<string> {
+    console.log(`   [IPFS] Uploading result package from ${directoryPath}...`);
+    const ipfs = create();
+    let rootCid = '';
+
+    for await (const file of ipfs.addAll(globSource(directoryPath, '**/*'))) 
+        rootCid = file.cid.toString();
+    
+    console.log(`   [IPFS] Result package uploaded`);
+    return rootCid;
+}
+
+// Wasm exe
+async function executeWasmJob(jobDirectoryPath: string): Promise<ExecutionResult> {
+    console.log(`   [WASM] Initializing Wasmer SDK...`);
+    await init();
+
+    console.log(`   [WASM] Reading manifest...`);
+    const manifestPath = path.join(jobDirectoryPath, 'manifest.json');
+    const manifestExists = await fs.access(manifestPath).then(() => true).catch(() => false);
+    if (!manifestExists) {
+        throw new Error("manifest.json not found in job directory!");
+    }
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
+    console.log(`   [WASM] Manifest loaded:`, manifest);
+
+    const wasmFilePath = path.join(jobDirectoryPath, manifest.executable);
+    console.log(`   [WASM] Loading Wasm module from: ${wasmFilePath}`);
+    
+    console.log(`   [WASM] Initializing WASI sandbox...`);
+    const wasi = new WASI({
+        args: [manifest.executable, ...manifest.args],
+        env: {},
+        preopens: {
+            '/': jobDirectoryPath
+        }
+    });
+
+    const wasmBytes = await fs.readFile(wasmFilePath);
+    const module = await Wasmer.fromFile(wasmBytes);
+    console.log(`   [WASM] Instantiating module with WASI imports...`);
+    const instance = await wasi.instantiate(module, wasi.getImports(module));
+
+    console.log(`   [WASM] Running instance...`);
+    const exitCode = wasi.start(instance);
+    const stdout = await wasi.getStdoutString();
+    const stderr = await wasi.getStderrString();
+
+    console.log(`   [WASM] Execution finished`);
+
+    if (exitCode !== 0) throw new Error(`Wasm execution failed`);
+
+    const outputPath = path.join(jobDirectoryPath, manifest.output_path);
+    return { outputPath, stdout, stderr };
+}
+
+// Result Packager
+async function createResultPackage(execResult: ExecutionResult): Promise<string> {
+    console.log(`   [SYS] Creating result package...`);
+    const resultDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nodelink-result-'));
+
+    await fs.writeFile(path.join(resultDir, 'stdout.txt'), execResult.stdout);
+    await fs.writeFile(path.join(resultDir, 'stderr.txt'), execResult.stderr);
+
+    
+    const finalOutputPath = path.join(resultDir, 'output');
+    await fs.cp(execResult.outputPath, finalOutputPath, { recursive: true });
+
+    console.log(`   [SYS] Result package created`);
+    return resultDir;
+}
 
 // @ts-ignore
-const idl = JSON.parse(fs.readFileSync('./target/idl/node_link.json', 'utf-8'));
+let idl: any = null;
+async function getIdl() {
+    if (idl) return idl;
+    idl = JSON.parse(await fs.readFile('./target/idl/node_link.json', 'utf-8'));
+    return idl;
+}
 
-// Config
 let anchorConfig: any = null;
-
-function getAnchorConfig() {
+async function getAnchorConfig() {
     if (anchorConfig) return anchorConfig;
     const tomlPath = "./Anchor.toml";
-    if (!fs.existsSync(tomlPath)) {
-        throw new Error("Anchor.toml not found!");
-    }
-    const tomlContent = fs.readFileSync(tomlPath, "utf-8");
+    const tomlContent = await fs.readFile(tomlPath, "utf-8");
     anchorConfig = toml.parse(tomlContent);
     return anchorConfig;
 }
 
-// Program and Cluster
-const PROGRAM_ID = new PublicKey(getAnchorConfig().programs.localnet.node_link);
+let programId: PublicKey | null = null;
+async function getProgramId(): Promise<PublicKey> {
+    if (programId) return programId;
+    const config = await getAnchorConfig();
+    programId = new PublicKey(config.programs.localnet.node_link);
+    return programId;
+}
 
-const CLUSTER_URLS = {
+const CLUSTER_URLS: { [key: string]: string } = {
     localnet: "http://127.0.0.1:8899",
     devnet: "https://api.devnet.solana.com",
     mainnet: "https://api.mainnet-beta.solana.com",
 };
 
-// Connection and Provider
-function getConnection(): Connection {
-    const config = getAnchorConfig();
+async function getConnection(): Promise<Connection> {
+    const config = await getAnchorConfig();
     const clusterName = config.provider.cluster;
     const clusterUrl = CLUSTER_URLS[clusterName];
     if (!clusterUrl) {
-        throw new Error(`Unknown cluster name in Anchor.toml: ${clusterName}`);
+        throw new Error(`Unknown cluster: ${clusterName}`);
     }
     return new Connection(clusterUrl, "confirmed");
 }
 
-function getProvider(wallet: Wallet): AnchorProvider {
-    const connection = getConnection();
+async function getProvider(wallet: Wallet): Promise<AnchorProvider> {
+    const connection = await getConnection();
     return new AnchorProvider(connection, wallet, AnchorProvider.defaultOptions());
 }
 
-// Wallet
-function getWallet(keypairPath?: string): Keypair {
+async function getWallet(keypairPath?: string): Promise<Keypair> {
     let pathToLoad = keypairPath;
-
     if (!pathToLoad) {
-        const config = getAnchorConfig();
+        const config = await getAnchorConfig();
         const walletPath = config.provider.wallet;
         if (walletPath) {
             pathToLoad = walletPath.replace('~', os.homedir());
         }
     }
-    
     if (!pathToLoad) {
-        pathToLoad = os.homedir() + "/.config/solana/id.json";
+        pathToLoad = path.join(os.homedir(), ".config", "solana", "id.json");
     }
-
-    if (!fs.existsSync(pathToLoad)) {
-        throw new Error(`Keypair file not found at path: ${pathToLoad}`);
-    }
-    const keypairData = JSON.parse(fs.readFileSync(pathToLoad, "utf-8"));
+    const keypairData = JSON.parse(await fs.readFile(pathToLoad, "utf-8"));
     return Keypair.fromSecretKey(new Uint8Array(keypairData));
 }
 
-// Program
-function getProgram(wallet: Wallet): Program<NodeLink> {
-    const provider = getProvider(wallet);
-    return new Program<NodeLink>(idl, provider);
+async function getProgram(wallet: Wallet): Promise<Program<NodeLink>> {
+    const provider = await getProvider(wallet);
+    const pId = await getProgramId();
+    const i = await getIdl();
+    return new Program<NodeLink>(i, provider);
 }
 
-// --- Original provider-cli.ts code ---
-
+// cli
 const program = new Command();
 
 program
@@ -89,7 +201,6 @@ program
     .description("CLI for NodeLink providers to manage their nodes and jobs.")
     .version("0.1.0");
 
-// --- Register Command ---
 program
     .command("register")
     .description("Register as a provider on the NodeLink network.")
@@ -99,36 +210,25 @@ program
     .action(async (options) => {
         try {
             console.log("Registering provider...");
-
-            // 1. Load wallet
-            const wallet = getWallet(options.keypair);
+            const wallet = await getWallet(options.keypair);
             console.log(`Provider wallet loaded: ${wallet.publicKey.toBase58()}`);
-
-            // 2. Get program
-            const program = getProgram(new Wallet(wallet));
-
-            // 3. Calculate Provider PDA
+            const program = await getProgram(new Wallet(wallet));
             const [providerPda] = PublicKey.findProgramAddressSync(
                 [Buffer.from("provider"), wallet.publicKey.toBuffer()],
                 program.programId
             );
-
-            // 4. Call the register instruction
             const tx = await program.methods
                 .providerRegister(options.jobTags, options.hardwareConfig)
                 .accounts({
                     provider: providerPda,
                     authority: wallet.publicKey,
                     systemProgram: SystemProgram.programId,
-                }as any)
+                } as any)
                 .rpc();
-
-            console.log("✅ Provider registered successfully!");
+            console.log("Provider registered successfully!");
             console.log(`Transaction signature: ${tx}`);
-
         } catch (error) {
-            console.error("\n❌ Error registering provider:", error.message);
-            // Add more detailed error logging if needed
+            console.error("\nError registering provider:", error.message);
             if (error.logs) {
                 console.error("\n--- Solana Program Logs ---");
                 error.logs.forEach((log: string) => console.log(log));
@@ -137,8 +237,98 @@ program
         }
     });
 
-// --- Add more commands here (e.g., listen, status) ---
+program
+    .command("listen")
+    .description("Start the provider daemon to listen for and process jobs.")
+    .option("-k, --keypair <path>", "Path to the provider's keypair file.")
+    .action(async (options) => 
+    {
+        console.log("Starting provider daemon...");
+        const wallet = await getWallet(options.keypair);
+        const program = await getProgram(new Wallet(wallet));
+        const providerKey = wallet.publicKey;
+        const [providerPda] = PublicKey.findProgramAddressSync(
+            [Buffer.from("provider"), providerKey.toBuffer()],
+            program.programId
+        );
+        console.log(`Daemon started for provider: ${providerKey.toBase58()}`);
+        console.log(`Provider PDA: ${providerPda.toBase58()}`);
+        console.log("Scanning for available jobs... ");
 
+        while (true) 
+        {
+            try {
+                const jobAccounts = await program.account.jobAccount.all();
+                const suitableJobs = jobAccounts.filter(job => {
+                    const isPending = Object.keys(job.account.status)[0] === 'pending';
+                    const hasFailed = job.account.failedProviders.some(p => p.equals(providerKey));
+                    return isPending && !hasFailed;
+                });
 
-// Parse arguments
-program.parse(process.argv);
+                if (suitableJobs.length === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    continue;
+                }
+
+                console.log(`Found suitable job(s).`);
+                const jobToProcess = suitableJobs[0];
+                const jobPda = jobToProcess.publicKey;
+                const jobId = jobToProcess.account.jobId;
+
+                console.log(`   - Attempting to accept job: ${jobPda.toBase58()} (ID: ${jobId})`);
+
+                try {
+                    const acceptTx = await program.methods
+                        .acceptJob(jobId)
+                        .accounts({jobAccount: jobPda, providerAccount: providerPda} as any)
+                        .rpc();
+                    console.log(`   Job accepted! Transaction: ${acceptTx}`);
+
+                    let jobTempDir: string | null = null;
+                    let resultPackageDir: string | null = null;
+                    try {
+                        const cid = jobToProcess.account.jobDetails;
+                        jobTempDir = await downloadJobDirectory(cid);
+                        const execResult = await executeWasmJob(jobTempDir);
+                        
+                        resultPackageDir = await createResultPackage(execResult);
+                        const resultCid = await uploadToIpfs(resultPackageDir);
+
+                        console.log(`   [CHAIN] Submitting result CID to chain...`);
+                        const submitTx = await program.methods
+                            .submitResults(jobId, resultCid)
+                            .accounts({ job: jobPda, providerAccount: providerPda} as any)
+                            .rpc();
+                        console.log(`   [CHAIN] Result submitted! Transaction: ${submitTx}`);
+
+                    } catch (processingError) {
+                        console.error(`   Error processing job ${jobId}:`, processingError.message);
+                    } finally {
+                        if (jobTempDir) {
+                            console.log(`   [SYS] Cleaning up job directory: ${jobTempDir}`);
+                            await fs.rm(jobTempDir, { recursive: true, force: true });
+                        }
+                        if (resultPackageDir) {
+                            console.log(`   [SYS] Cleaning up result package directory: ${resultPackageDir}`);
+                            await fs.rm(resultPackageDir, { recursive: true, force: true });
+                        }
+                    }
+                } catch (acceptError) {
+                    if (acceptError.message.includes("Job is not pending")) {
+                        console.log("   - Job was taken by another provider. Looking for another...");
+                    } else {
+                        console.error(`   Failed to accept job: ${acceptError.message}`);
+                    }
+                }
+            } catch (error) {
+                console.error("\nAn error occurred in the main loop:", error.message);
+            }
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+    });
+
+(async () => {
+    await getIdl();
+    await getProgramId();
+    program.parse(process.argv);
+})();

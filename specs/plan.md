@@ -41,15 +41,25 @@ Phần này làm rõ kiến trúc thực thi công việc đã được nâng c�
     *   `hardware_tags`: Mô tả các yêu cầu về phần cứng (ví dụ: `"gpu"`, `"vram_16gb"`).
 *   Provider có thể quét các job trên blockchain và lọc cực kỳ hiệu quả dựa trên các tags này mà không cần truy cập IPFS.
 
-**2. Quy ước và Từ điển Tags**
+**2. Cấu trúc Job: Manifest.json**
 
-*   Để đảm bảo tính nhất quán, một file "từ điển" (`specs/tags_dictionary.md`) sẽ được tạo ra để định nghĩa một bộ từ vựng chung cho tất cả các tags.
-*   Client của cả Renter và Provider sẽ tuân theo từ điển này để đảm bảo việc đăng và tìm job diễn ra chính xác.
+*   Để chuẩn hóa việc gửi và thực thi job, mọi job được gửi lên NodeLink đều phải tuân theo một cấu trúc thư mục chuẩn trên IPFS. "Bộ não" của cấu trúc này là file `manifest.json`.
+*   **`manifest.json`**: Đóng vai trò là "hợp đồng" giữa Renter và Provider, mô tả file nào cần thực thi, các tham số, và nơi tìm kết quả. Cấu trúc chi tiết sẽ được định nghĩa trong `specs/manifest_spec.md`.
+*   **Thư mục Job**: Toàn bộ thư mục (chứa `manifest.json`, file Wasm, và các file input) được tải lên IPFS và CID của thư mục này được lưu trữ on-chain trong trường `job_details_cid`.
 
-**3. Lộ trình Triển khai Engine**
+**3. Cấu trúc Kết quả: Gói Kết quả (Result Package)**
 
-*   **Giai đoạn đầu (Tập trung vào Docker):** Hệ thống sẽ ưu tiên hỗ trợ `ExecutionEngine::Docker` là engine thực thi đầu tiên. Trường `job_details` sẽ chứa tên của Docker image.
-*   **Giai đoạn tương lai (Mở rộng):** Kiến trúc này cho phép dễ dàng mở rộng để hỗ trợ các engine khác như `Wasm` trong tương lai bằng cách thêm biến thể mới vào `enum ExecutionEngine`.
+*   Để đảm bảo Renter luôn nhận được đầy đủ thông tin, mọi kết quả job đều được Provider đóng gói thành một thư mục chuẩn ("Gói Kết quả") trước khi tải lên IPFS.
+*   **Cấu trúc mặc định:**
+    *   `stdout.txt`: Chứa toàn bộ log từ luồng output tiêu chuẩn.
+    *   `stderr.txt`: Chứa toàn bộ log từ luồng lỗi tiêu chuẩn.
+    *   `output/`: Một thư mục con chứa kết quả chính do Wasm tạo ra (theo `output_path` trong manifest).
+*   **Lợi ích**: Cung cấp cho Renter một kết quả nhất quán, đầy đủ thông tin để xác minh và gỡ lỗi. Đây là hành vi mặc định của nền tảng.
+
+**4. Lộ trình Triển khai Engine**
+
+*   **Ưu tiên #1 (Wasm - WebAssembly):** Để hiện thực hóa triết lý "set it and forget it" cho Provider, hệ thống sẽ ưu tiên hỗ trợ `ExecutionEngine::Wasm` làm engine thực thi chính. Cách tiếp cận này yêu cầu Provider chỉ cần cài đặt một Wasm runtime tiêu chuẩn (ví dụ: WasmEdge, Wasmer). Logic thực thi cho mỗi job (dưới dạng file `.wasm`) sẽ được Renter cung cấp và tải về theo yêu cầu, giúp loại bỏ gánh nặng phải cấu hình hay cache các môi trường phức tạp cho Provider.
+*   **Giai đoạn tương lai (Docker):** Hỗ trợ `ExecutionEngine::Docker` sẽ được xem là một tính năng mở rộng. Nó sẽ dành cho các nhóm Provider chuyên nghiệp muốn cung cấp các môi trường phần mềm kế thừa (legacy) hoặc quá phức tạp để biên dịch sang Wasm.
 
 ---
 

@@ -1,9 +1,9 @@
 /// <reference types="mocha" />
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { Keypair, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
-import { NodeLink } from "../target/types/node_link";
+import type { NodeLink } from "../target/types/node_link.js";
 
 // Helper function to sleep for a given time
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,7 +35,7 @@ describe("node-link", () => {
   );
 
   // Shared state for tests
-  let jobId: BN;
+  let jobId: anchor.BN;
   let jobAccountPda: PublicKey;
   let escrowPda: PublicKey;
 
@@ -59,7 +59,7 @@ describe("node-link", () => {
           counter: counterPda,
           user: renter.publicKey,
           systemProgram: SystemProgram.programId
-        })
+        }as any)
         .signers([renter])
         .rpc();
       console.log("Job counter initialized.");
@@ -80,7 +80,7 @@ describe("node-link", () => {
         provider: providerAccountPda,
         authority: providerAuthority.publicKey,
         systemProgram: SystemProgram.programId
-      })
+      }as any)
       .signers([providerAuthority])
       .rpc();
     console.log(`Provider 1 ${providerAuthority.publicKey.toBase58()} registered with tags.`);
@@ -93,7 +93,7 @@ describe("node-link", () => {
         provider: providerAccountPda2,
         authority: providerAuthority2.publicKey,
         systemProgram: SystemProgram.programId
-      })
+      }as any)
       .signers([providerAuthority2])
       .rpc();
     console.log(`Provider 2 ${providerAuthority2.publicKey.toBase58()} registered with tags.`);
@@ -116,18 +116,18 @@ describe("node-link", () => {
       );
       escrowPda = escrow;
 
-      const reward = new BN(1 * LAMPORTS_PER_SOL);
-      const max_duration = new BN(60); // 60 seconds for the job
+      const reward = new anchor.BN(1 * LAMPORTS_PER_SOL);
+      const max_duration = new anchor.BN(60); // 60 seconds for the job
 
       await program.methods
-        .createJob(reward, { docker: {} }, "3d_rendering", "gpu,ram_32gb", max_duration)
+        .createJob(reward, { docker: {} }, "3d_rendering", "gpu,ram_32gb", "", max_duration)
         .accounts({
           jobAccount: jobAccountPda,
           escrow: escrowPda,
           renter: renter.publicKey,
           counter: counterPda,
           systemProgram: SystemProgram.programId,
-        })
+        }as any)
         .signers([renter])
         .rpc();
 
@@ -148,7 +148,7 @@ describe("node-link", () => {
           providerAccount: providerAccountPda,
           provider: providerAuthority.publicKey,
           systemProgram: SystemProgram.programId,
-        })
+        }as any)
         .signers([providerAuthority])
         .rpc();
 
@@ -194,7 +194,7 @@ describe("node-link", () => {
             providerAccount: providerAccountPda,
             providerWallet: providerAuthority.publicKey,
             systemProgram: SystemProgram.programId,
-          })
+          }as any)
           .signers([renter])
           .rpc();
         assert.fail("The transaction should have failed with a Privilege Escalation error.");
@@ -206,7 +206,7 @@ describe("node-link", () => {
   });
 
   describe("Penalty and Edge Cases", () => {
-    let penaltyJobId: BN;
+    let penaltyJobId: anchor.BN;
     let penaltyJobPda: PublicKey;
     let penaltyEscrowPda: PublicKey;
 
@@ -225,25 +225,25 @@ describe("node-link", () => {
       );
 
       await program.methods
-        .createJob(new BN(0.5 * LAMPORTS_PER_SOL), { docker: {} }, "penalty-job", "", new BN(10))
-        .accounts ({ 
-          jobAccount: penaltyJobPda, 
-          escrow: penaltyEscrowPda, 
-          renter: renter.publicKey, 
-          counter: counterPda, 
-          systemProgram: SystemProgram.programId 
-        })
+        .createJob(new anchor.BN(0.5 * LAMPORTS_PER_SOL), { docker: {} }, "penalty-job", "", "", new anchor.BN(10))
+        .accounts ({
+          jobAccount: penaltyJobPda,
+          escrow: penaltyEscrowPda,
+          renter: renter.publicKey,
+          counter: counterPda,
+          systemProgram: SystemProgram.programId
+        }as any)
         .signers([renter])
         .rpc();
     });
 
     it("should allow the renter to reject results and penalize the provider", async () => {
-      await program.methods.acceptJob(penaltyJobId).accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey }).signers([providerAuthority]).rpc();
+      await program.methods.acceptJob(penaltyJobId).accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey }as any).signers([providerAuthority]).rpc();
       await program.methods.submitResults(penaltyJobId, "bad results").accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey, systemProgram: SystemProgram.programId }).signers([providerAuthority]).rpc();
       
       const providerAccountBefore = await program.account.provider.fetch(providerAccountPda);
 
-      await program.methods.verifyResults(penaltyJobId, false).accounts({ jobAccount: penaltyJobPda, escrow: penaltyEscrowPda, renter: renter.publicKey, providerAccount: providerAccountPda, providerWallet: providerAuthority.publicKey, systemProgram: SystemProgram.programId }).signers([renter]).rpc();
+      await program.methods.verifyResults(penaltyJobId, false).accounts({ jobAccount: penaltyJobPda, escrow: penaltyEscrowPda, renter: renter.publicKey, providerAccount: providerAccountPda, providerWallet: providerAuthority.publicKey, systemProgram: SystemProgram.programId }as any).signers([renter]).rpc();
 
       const providerAccountAfter = await program.account.provider.fetch(providerAccountPda);
       const jobAccountAfter = await program.account.jobAccount.fetch(penaltyJobPda);
@@ -257,7 +257,7 @@ describe("node-link", () => {
     it("should prevent a banned provider from accepting a job", async () => {
       // This test relies on the provider being banned from the previous test.
       try {
-        await program.methods.acceptJob(penaltyJobId).accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey }).signers([providerAuthority]).rpc();
+        await program.methods.acceptJob(penaltyJobId).accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey }as any).signers([providerAuthority]).rpc();
         assert.fail("Banned provider should not be able to accept a job");
       } catch (e) {
         assert.include(e.message, "Provider is currently banned or not available", "Error should be ProviderBannedOrBusy");
@@ -265,17 +265,17 @@ describe("node-link", () => {
     });
 
     it("should allow the renter to reclaim a timed-out job", async () => {
-            const shortJobDuration = new BN(0); // 0 seconds to make it timeout instantly
+            const shortJobDuration = new anchor.BN(0); // 0 seconds to make it timeout instantly
       const counterAccount = await program.account.jobCounter.fetch(counterPda);
       const reclaimJobId = counterAccount.count;
 
       const [reclaimJobPda] = PublicKey.findProgramAddressSync([Buffer.from("job"), reclaimJobId.toBuffer("le", 8)], program.programId);
       const [reclaimEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from("escrow"), reclaimJobPda.toBuffer()], program.programId);
 
-      await program.methods.createJob(new BN(0.1 * LAMPORTS_PER_SOL), { docker: {} }, "reclaim-job", "", shortJobDuration).accounts({ jobAccount: reclaimJobPda, escrow: reclaimEscrowPda, renter: renter.publicKey, counter: counterPda, systemProgram: SystemProgram.programId }).signers([renter]).rpc();
+      await program.methods.createJob(new anchor.BN(0.1 * LAMPORTS_PER_SOL), { docker: {} }, "reclaim-job", "", "", shortJobDuration).accounts({ jobAccount: reclaimJobPda, escrow: reclaimEscrowPda, renter: renter.publicKey, counter: counterPda, systemProgram: SystemProgram.programId }as any).signers([renter]).rpc();
       
       // FIX: Use the second, non-banned provider
-      await program.methods.acceptJob(reclaimJobId).accounts({ jobAccount: reclaimJobPda, providerAccount: providerAccountPda2, provider: providerAuthority2.publicKey, systemProgram: SystemProgram.programId }).signers([providerAuthority2]).rpc();
+      await program.methods.acceptJob(reclaimJobId).accounts({ jobAccount: reclaimJobPda, providerAccount: providerAccountPda2, provider: providerAuthority2.publicKey, systemProgram: SystemProgram.programId }as any).signers([providerAuthority2]).rpc();
 
       console.log("\n    Waiting for submission deadline to pass...");
       await sleep(3000); // Wait 3 seconds, more than the job duration

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("BzBmVWwhcqohg6vHZ7bNrT6nDDvNcsvbkvc6jHwSLgUK");
+declare_id!("9t2XwMCE5qdkRbNfKErTifAaPTX2ue5epJSaqH1hsAZJ");
 
 const ANCHOR_DISCRIMINATOR_SIZE: usize = 8;
 const VERIFY_DURATION: i64 = 600; 
@@ -78,7 +78,7 @@ pub mod node_link {
         Ok(())
     }
 
-    pub fn create_job(ctx: Context<CreateJob>, reward: u64, engine: ExecutionEngine, job_tags: String, hardware_tags: String, max_duration: i64) -> Result<()> {
+    pub fn create_job(ctx: Context<CreateJob>, reward: u64, engine: ExecutionEngine, job_tags: String, hardware_tags: String,job_details: String, max_duration: i64) -> Result<()> {
         let counter = &mut ctx.accounts.counter;
         let job_id = counter.count;
 
@@ -96,6 +96,7 @@ pub mod node_link {
             verification_deadline: 0,
             max_duration,
             submission_deadline: 0,
+            job_details: job_details,
         });
 
         counter.count = counter.count.checked_add(1).unwrap();
@@ -290,6 +291,8 @@ pub struct JobAccount {
     pub results: String,
     #[max_len(5)]
     pub failed_providers: Vec<Pubkey>,
+    #[max_len(100)]
+    pub job_details: String,
     pub verification_deadline: i64,
     pub max_duration: i64,
     pub submission_deadline: i64,
