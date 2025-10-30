@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 /// <reference types="mocha" />
 import * as anchor from "@coral-xyz/anchor";
-import { BN } from "@coral-xyz/anchor";
 import { Keypair, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
 // Helper function to sleep for a given time
@@ -95,10 +94,10 @@ describe("node-link", () => {
             jobAccountPda = pda;
             const [escrow, escrowBump] = PublicKey.findProgramAddressSync([Buffer.from("escrow"), jobAccountPda.toBuffer()], program.programId);
             escrowPda = escrow;
-            const reward = new BN(1 * LAMPORTS_PER_SOL);
-            const max_duration = new BN(60); // 60 seconds for the job
+            const reward = new anchor.BN(1 * LAMPORTS_PER_SOL);
+            const max_duration = new anchor.BN(60); // 60 seconds for the job
             yield program.methods
-                .createJob(reward, { docker: {} }, "3d_rendering", "gpu,ram_32gb", max_duration)
+                .createJob(reward, { docker: {} }, "3d_rendering", "gpu,ram_32gb", "", max_duration)
                 .accounts({
                 jobAccount: jobAccountPda,
                 escrow: escrowPda,
@@ -185,7 +184,7 @@ describe("node-link", () => {
             [penaltyJobPda] = PublicKey.findProgramAddressSync([Buffer.from("job"), penaltyJobId.toBuffer("le", 8)], program.programId);
             [penaltyEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from("escrow"), penaltyJobPda.toBuffer()], program.programId);
             yield program.methods
-                .createJob(new BN(0.5 * LAMPORTS_PER_SOL), { docker: {} }, "penalty-job", "", new BN(10))
+                .createJob(new anchor.BN(0.5 * LAMPORTS_PER_SOL), { docker: {} }, "penalty-job", "", "", new anchor.BN(10))
                 .accounts({
                 jobAccount: penaltyJobPda,
                 escrow: penaltyEscrowPda,
@@ -219,12 +218,12 @@ describe("node-link", () => {
             }
         }));
         it("should allow the renter to reclaim a timed-out job", () => __awaiter(void 0, void 0, void 0, function* () {
-            const shortJobDuration = new BN(0); // 0 seconds to make it timeout instantly
+            const shortJobDuration = new anchor.BN(0); // 0 seconds to make it timeout instantly
             const counterAccount = yield program.account.jobCounter.fetch(counterPda);
             const reclaimJobId = counterAccount.count;
             const [reclaimJobPda] = PublicKey.findProgramAddressSync([Buffer.from("job"), reclaimJobId.toBuffer("le", 8)], program.programId);
             const [reclaimEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from("escrow"), reclaimJobPda.toBuffer()], program.programId);
-            yield program.methods.createJob(new BN(0.1 * LAMPORTS_PER_SOL), { docker: {} }, "reclaim-job", "", shortJobDuration).accounts({ jobAccount: reclaimJobPda, escrow: reclaimEscrowPda, renter: renter.publicKey, counter: counterPda, systemProgram: SystemProgram.programId }).signers([renter]).rpc();
+            yield program.methods.createJob(new anchor.BN(0.1 * LAMPORTS_PER_SOL), { docker: {} }, "reclaim-job", "", "", shortJobDuration).accounts({ jobAccount: reclaimJobPda, escrow: reclaimEscrowPda, renter: renter.publicKey, counter: counterPda, systemProgram: SystemProgram.programId }).signers([renter]).rpc();
             // FIX: Use the second, non-banned provider
             yield program.methods.acceptJob(reclaimJobId).accounts({ jobAccount: reclaimJobPda, providerAccount: providerAccountPda2, provider: providerAuthority2.publicKey, systemProgram: SystemProgram.programId }).signers([providerAuthority2]).rpc();
             console.log("\n    Waiting for submission deadline to pass...");

@@ -1,7 +1,6 @@
 import { Command } from "commander";
-import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
-import type { NodeLink } from "../target/types/node_link.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { Wallet } from "@coral-xyz/anchor";
 import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
@@ -9,8 +8,7 @@ import { create, globSource } from 'kubo-rpc-client';
 import { init, Wasmer } from "@wasmer/sdk";
 import { WASI } from "@wasmer/wasi";
 import { extract } from 'it-tar';
-// @ts-ignore
-import toml from 'toml';
+import { getWallet, getProgram, getIdl, getProgramId } from "./common.js";
 
 type ExecutionResult = {
     outputPath: string;
@@ -122,75 +120,6 @@ async function createResultPackage(execResult: ExecutionResult): Promise<string>
 
     console.log(`   [SYS] Result package created`);
     return resultDir;
-}
-
-// @ts-ignore
-let idl: any = null;
-async function getIdl() {
-    if (idl) return idl;
-    idl = JSON.parse(await fs.readFile('./target/idl/node_link.json', 'utf-8'));
-    return idl;
-}
-
-let anchorConfig: any = null;
-async function getAnchorConfig() {
-    if (anchorConfig) return anchorConfig;
-    const tomlPath = "./Anchor.toml";
-    const tomlContent = await fs.readFile(tomlPath, "utf-8");
-    anchorConfig = toml.parse(tomlContent);
-    return anchorConfig;
-}
-
-let programId: PublicKey | null = null;
-async function getProgramId(): Promise<PublicKey> {
-    if (programId) return programId;
-    const config = await getAnchorConfig();
-    programId = new PublicKey(config.programs.localnet.node_link);
-    return programId;
-}
-
-const CLUSTER_URLS: { [key: string]: string } = {
-    localnet: "http://127.0.0.1:8899",
-    devnet: "https://api.devnet.solana.com",
-    mainnet: "https://api.mainnet-beta.solana.com",
-};
-
-async function getConnection(): Promise<Connection> {
-    const config = await getAnchorConfig();
-    const clusterName = config.provider.cluster;
-    const clusterUrl = CLUSTER_URLS[clusterName];
-    if (!clusterUrl) {
-        throw new Error(`Unknown cluster: ${clusterName}`);
-    }
-    return new Connection(clusterUrl, "confirmed");
-}
-
-async function getProvider(wallet: Wallet): Promise<AnchorProvider> {
-    const connection = await getConnection();
-    return new AnchorProvider(connection, wallet, AnchorProvider.defaultOptions());
-}
-
-async function getWallet(keypairPath?: string): Promise<Keypair> {
-    let pathToLoad = keypairPath;
-    if (!pathToLoad) {
-        const config = await getAnchorConfig();
-        const walletPath = config.provider.wallet;
-        if (walletPath) {
-            pathToLoad = walletPath.replace('~', os.homedir());
-        }
-    }
-    if (!pathToLoad) {
-        pathToLoad = path.join(os.homedir(), ".config", "solana", "id.json");
-    }
-    const keypairData = JSON.parse(await fs.readFile(pathToLoad, "utf-8"));
-    return Keypair.fromSecretKey(new Uint8Array(keypairData));
-}
-
-async function getProgram(wallet: Wallet): Promise<Program<NodeLink>> {
-    const provider = await getProvider(wallet);
-    const pId = await getProgramId();
-    const i = await getIdl();
-    return new Program<NodeLink>(i, provider);
 }
 
 // cli
