@@ -7,7 +7,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-node_link = "BzBmVWwhcqohg6vHZ7bNrT6nDDvNcsvbkvc6jHwSLgUK"
+node_link = "9t2XwMCE5qdkRbNfKErTifAaPTX2ue5epJSaqH1hsAZJ"
 
 [registry]
 url = "https://api.apr.dev"

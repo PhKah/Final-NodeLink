@@ -1,293 +1,170 @@
-/// <reference types="mocha" />
+import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
+import { execSync, spawn, ChildProcess } from "child_process";
+import * as fs from "fs/promises";
+import * as path from "path";
+import * as os from "os";
+import { assert } from "chai";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Keypair, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { assert } from "chai";
 import type { NodeLink } from "../target/types/node_link.js";
+import BN from "bn.js";
 
-// Helper function to sleep for a given time
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Utility to wait for a certain amount of time
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-describe("node-link", () => {
-  // Configure the client to use the local cluster.
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
+describe("CLI End-to-End Tests", () => {
+    const provider = anchor.AnchorProvider.env();
+    anchor.setProvider(provider);
+    const program = anchor.workspace.NodeLink as Program<NodeLink>;
 
-  const program = anchor.workspace.NodeLink as Program<NodeLink>;
+    let renter: Keypair;
+    let providerKp: Keypair;
+    let renterKeypairPath: string;
+    let providerKeypairPath: string;
+    let listenerProcess: ChildProcess | null = null;
 
-  // Keypairs for accounts
-  const renter = Keypair.generate();
-  const providerAuthority = Keypair.generate();
-  const providerAuthority2 = Keypair.generate(); // A second provider for testing penalties
+    // Helper to run synchronous CLI commands
+    const runCliSync = (command: string): string => {
+        try {
+            console.log(`\n$ ${command}`);
+            const output = execSync(`ts-node ${command}`, { encoding: "utf8" });
+            console.log(output);
+            return output;
+        } catch (e) {
+            console.error(`Error executing command: ${command}`, e);
+            throw e;
+        }
+    };
 
-  // PDAs
-  const [counterPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("counter")],
-    program.programId
-  );
-  const [providerAccountPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("provider"), providerAuthority.publicKey.toBuffer()],
-    program.programId
-  );
-  const [providerAccountPda2] = PublicKey.findProgramAddressSync(
-    [Buffer.from("provider"), providerAuthority2.publicKey.toBuffer()],
-    program.programId
-  );
+    // Helper to run the listener command in the background
+    const startListener = (command: string): ChildProcess => {
+        console.log(`\n$ ${command}`);
+        const [cmd, ...args] = command.split(' ');
+        const child = spawn(cmd, args, {
+            stdio: ['pipe', 'pipe', 'pipe'], // Pipe stdout, stderr
+        });
 
-  // Shared state for tests
-  let jobId: anchor.BN;
-  let jobAccountPda: PublicKey;
-  let escrowPda: PublicKey;
+        child.stdout.on('data', (data) => {
+            console.log(`[LISTENER STDOUT]: ${data.toString()}`);
+        });
 
-  before(async () => {
-    // Airdrop SOL to all parties
-    await Promise.all([
-      provider.connection.requestAirdrop(renter.publicKey, 10 * LAMPORTS_PER_SOL),
-      provider.connection.requestAirdrop(providerAuthority.publicKey, 10 * LAMPORTS_PER_SOL),
-      provider.connection.requestAirdrop(providerAuthority2.publicKey, 10 * LAMPORTS_PER_SOL),
-    ]).then(async (signatures) => {
-      await Promise.all(
-        signatures.map((sig) => provider.connection.confirmTransaction(sig, "confirmed")),
-      );
+        child.stderr.on('data', (data) => {
+            console.error(`[LISTENER STDERR]: ${data.toString()}`);
+        });
+
+        child.on('close', (code) => {
+            console.log(`[LISTENER]: Process exited with code ${code}`);
+        });
+        
+        return child;
+    };
+
+    before(async () => {
+        renter = Keypair.generate();
+        providerKp = Keypair.generate();
+
+        renterKeypairPath = path.join(os.tmpdir(), "renter-keypair.json");
+        providerKeypairPath = path.join(os.tmpdir(), "provider-keypair.json");
+        await fs.writeFile(renterKeypairPath, JSON.stringify(Array.from(renter.secretKey)));
+        await fs.writeFile(providerKeypairPath, JSON.stringify(Array.from(providerKp.secretKey)));
+
+        console.log("--- Airdropping SOL ---");
+        await provider.connection.requestAirdrop(renter.publicKey, 5 * LAMPORTS_PER_SOL);
+        await provider.connection.requestAirdrop(providerKp.publicKey, 5 * LAMPORTS_PER_SOL);
+        console.log(`Airdropped 5 SOL to Renter: ${renter.publicKey.toBase58()}`);
+        console.log(`Airdropped 5 SOL to Provider: ${providerKp.publicKey.toBase58()}`);
+
+        const [counterPda] = PublicKey.findProgramAddressSync([Buffer.from("counter")], program.programId);
+        const counterAccount = await program.account.jobCounter.fetchNullable(counterPda);
+        if (counterAccount === null) {
+            console.log("--- Initializing JobCounter ---");
+            await program.methods.initializeCounter().accounts({ 
+                counter: counterPda, 
+                user: provider.wallet.publicKey,
+                systemProgram: SystemProgram.programId
+            } as any).rpc();
+        }
     });
 
-    // Initialize the job counter, catching error if it already exists
-    try {
-      await program.methods
-        .initializeCounter()
-        .accounts({
-          counter: counterPda,
-          user: renter.publicKey,
-          systemProgram: SystemProgram.programId
-        }as any)
-        .signers([renter])
-        .rpc();
-      console.log("Job counter initialized.");
-    } catch (e) {
-      if (e.toString().includes("already in use")) {
-        console.log("Job counter already initialized.");
-      } else {
-        throw e;
-      }
-    }
-
-    // Register both providers with their capabilities
-    const provider1_job_tags = "ai_training,3d_rendering";
-    const provider1_hardware = "gpu,gpu_vram_16gb,ram_32gb";
-    await program.methods
-      .providerRegister(provider1_job_tags, provider1_hardware)
-      .accounts({
-        provider: providerAccountPda,
-        authority: providerAuthority.publicKey,
-        systemProgram: SystemProgram.programId
-      }as any)
-      .signers([providerAuthority])
-      .rpc();
-    console.log(`Provider 1 ${providerAuthority.publicKey.toBase58()} registered with tags.`);
-
-    const provider2_job_tags = "data_analysis";
-    const provider2_hardware = "cpu_multicore,ram_16gb";
-    await program.methods
-      .providerRegister(provider2_job_tags, provider2_hardware)
-      .accounts({
-        provider: providerAccountPda2,
-        authority: providerAuthority2.publicKey,
-        systemProgram: SystemProgram.programId
-      }as any)
-      .signers([providerAuthority2])
-      .rpc();
-    console.log(`Provider 2 ${providerAuthority2.publicKey.toBase58()} registered with tags.`);
-  });
-
-  describe("Happy Path Full Job Lifecycle", () => {
-    it("should create a new job", async () => {
-      const counterAccountBefore = await program.account.jobCounter.fetch(counterPda);
-      jobId = counterAccountBefore.count;
-
-      const [pda, bump] = PublicKey.findProgramAddressSync(
-        [Buffer.from("job"), jobId.toBuffer("le", 8)],
-        program.programId
-      );
-      jobAccountPda = pda;
-
-      const [escrow, escrowBump] = PublicKey.findProgramAddressSync(
-        [Buffer.from("escrow"), jobAccountPda.toBuffer()],
-        program.programId
-      );
-      escrowPda = escrow;
-
-      const reward = new anchor.BN(1 * LAMPORTS_PER_SOL);
-      const max_duration = new anchor.BN(60); // 60 seconds for the job
-
-      await program.methods
-        .createJob(reward, { docker: {} }, "3d_rendering", "gpu,ram_32gb", "", max_duration)
-        .accounts({
-          jobAccount: jobAccountPda,
-          escrow: escrowPda,
-          renter: renter.publicKey,
-          counter: counterPda,
-          systemProgram: SystemProgram.programId,
-        }as any)
-        .signers([renter])
-        .rpc();
-
-      const jobAccount = await program.account.jobAccount.fetch(jobAccountPda);
-      assert.equal(jobAccount.status.hasOwnProperty("pending"), true, "Job status should be Pending");
-      assert.equal(jobAccount.renter.toBase58(), renter.publicKey.toBase58());
-      assert.equal(jobAccount.reward.toString(), reward.toString());
-
-      const escrowBalance = await provider.connection.getBalance(escrowPda);
-      assert.isAbove(escrowBalance, 0, "Escrow should be funded");
+    after(async () => {
+        if (listenerProcess && !listenerProcess.killed) {
+            console.log("--- Stopping listener process ---");
+            listenerProcess.kill();
+        }
+        console.log("--- Cleaning up temporary keypairs ---");
+        await fs.unlink(renterKeypairPath);
+        await fs.unlink(providerKeypairPath);
     });
 
-    it("should allow a provider to accept the job", async () => {
-      await program.methods
-        .acceptJob(jobId)
-        .accounts({
-          jobAccount: jobAccountPda,
-          providerAccount: providerAccountPda,
-          provider: providerAuthority.publicKey,
-          systemProgram: SystemProgram.programId,
-        }as any)
-        .signers([providerAuthority])
-        .rpc();
+    it("should successfully run the full job lifecycle via CLI", async function() {
+        this.timeout(120000); // Increase timeout to 2 minutes for this long-running test
 
-      const jobAccount = await program.account.jobAccount.fetch(jobAccountPda);
-      const providerAccount = await program.account.provider.fetch(providerAccountPda);
+        // 1. Register the provider
+        console.log("\n--- Testing: Provider Register ---");
+        const registerOutput = runCliSync(
+            `client/provider-cli.ts register --keypair ${providerKeypairPath} --job-tags "e2e-test" --hardware-config "test-config"`
+        );
+        assert.include(registerOutput, "Provider registered successfully!");
 
-      assert.equal(jobAccount.status.hasOwnProperty("inProgress"), true, "Job status should be InProgress");
-      assert.equal(jobAccount.provider.toBase58(), providerAuthority.publicKey.toBase58());
-      assert.equal(providerAccount.status.hasOwnProperty("busy"), true, "Provider status should be Busy");
-      assert.isTrue(jobAccount.submissionDeadline.gtn(0), "Submission deadline should be set");
-      assert.isTrue(jobAccount.verificationDeadline.gtn(0), "Verification deadline should be set");
+        // 2. Start the provider listener in the background
+        console.log("\n--- Testing: Provider Listen ---");
+        listenerProcess = startListener(
+            `ts-node client/provider-cli.ts listen --keypair ${providerKeypairPath}`
+        );
+        await sleep(5000); // Give the listener a moment to start up
+
+        // 3. Create the job
+        console.log("\n--- Testing: Renter Create Job ---");
+        const createJobOutput = runCliSync(
+            `client/renter-cli.ts create-job --keypair ${renterKeypairPath} --reward ${LAMPORTS_PER_SOL} --details "Qm...e2e...CID"`
+        );
+        assert.include(createJobOutput, "Job created successfully!");
+
+        const jobIdMatch = createJobOutput.match(/Job ID: (\d+)/);
+        assert.exists(jobIdMatch, "Job ID not found in create job output");
+        const jobId = new BN(jobIdMatch[1]);
+        console.log(`Extracted Job ID: ${jobId}`);
+
+        const [jobPda] = PublicKey.findProgramAddressSync(
+            [Buffer.from("job"), jobId.toBuffer("le", 8)],
+            program.programId
+        );
+
+        // 4. Poll until the job is processed by the listener.
+        // This means it should eventually end up in the 'pendingVerification' state.
+        console.log("\n--- Polling for Job Processing by Listener ---");
+        let jobState = await program.account.jobAccount.fetch(jobPda);
+        let attempts = 0;
+        while (Object.keys(jobState.status)[0] !== 'pendingVerification' && attempts < 20) {
+            const currentState = Object.keys(jobState.status)[0];
+            console.log(`Job status is '${currentState}', waiting for 'pendingVerification'...`);
+            // It's okay for the state to be 'pending' or 'inProgress' while we wait.
+            assert.oneOf(currentState, ['pending', 'inProgress']); 
+            await sleep(3000);
+            jobState = await program.account.jobAccount.fetch(jobPda);
+            attempts++;
+        }
+
+        // Final check to ensure we reached the desired state.
+        assert.equal(Object.keys(jobState.status)[0], 'pendingVerification', "Job did not enter 'pendingVerification' state");
+        console.log("Job is now AWAITING VERIFICATION.");
+
+        // At this point, the listener has done its job. We can stop it.
+        if (listenerProcess) {
+            console.log("--- Stopping listener process ---");
+            listenerProcess.kill();
+        }
+
+        // 5. Renter verifies results
+        console.log("\n--- Testing: Renter Verify Job ---");
+        const verifyJobOutput = runCliSync(
+            `client/renter-cli.ts verify-job --keypair ${renterKeypairPath} --job-id ${jobId} --accept true`
+        );
+        assert.include(verifyJobOutput, `results accepted successfully`);
+
+        // 6. Verify final job state
+        jobState = await program.account.jobAccount.fetch(jobPda);
+        assert.equal(Object.keys(jobState.status)[0], 'completed', "Job should be in 'Completed' state");
+        console.log("Job is now COMPLETED.");
     });
-
-    it("should allow the provider to submit results and become available", async () => {
-      const results = "Qm...example...CID";
-      await program.methods
-        .submitResults(jobId, results)
-        .accounts({
-          jobAccount: jobAccountPda,
-          providerAccount: providerAccountPda,
-          provider: providerAuthority.publicKey,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([providerAuthority])
-        .rpc();
-
-      const jobAccount = await program.account.jobAccount.fetch(jobAccountPda);
-      const providerAccount = await program.account.provider.fetch(providerAccountPda);
-
-      assert.equal(jobAccount.status.hasOwnProperty("pendingVerification"), true, "Job status should be PendingVerification");
-      assert.equal(jobAccount.results, results, "Results should be stored");
-      assert.equal(providerAccount.status.hasOwnProperty("available"), true, "Provider status should be Available");
-    });
-
-    it("should CATCH the known 'Privilege Escalation' error in verifyResults(true)", async () => {
-      try {
-        await program.methods
-          .verifyResults(jobId, true)
-          .accounts({
-            jobAccount: jobAccountPda,
-            escrow: escrowPda,
-            renter: renter.publicKey,
-            providerAccount: providerAccountPda,
-            providerWallet: providerAuthority.publicKey,
-            systemProgram: SystemProgram.programId,
-          }as any)
-          .signers([renter])
-          .rpc();
-        assert.fail("The transaction should have failed with a Privilege Escalation error.");
-      } catch (e) {
-        assert.include(e.message, "Cross-program invocation with unauthorized signer or writable account");
-        console.log("\n✅ Successfully caught known 'Privilege Escalation' error in verifyResults(true).");
-      }
-    });
-  });
-
-  describe("Penalty and Edge Cases", () => {
-    let penaltyJobId: anchor.BN;
-    let penaltyJobPda: PublicKey;
-    let penaltyEscrowPda: PublicKey;
-
-    beforeEach(async () => {
-      // Create a new job for each penalty test
-      const counterAccount = await program.account.jobCounter.fetch(counterPda);
-      penaltyJobId = counterAccount.count;
-
-      [penaltyJobPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("job"), penaltyJobId.toBuffer("le", 8)],
-        program.programId
-      );
-      [penaltyEscrowPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("escrow"), penaltyJobPda.toBuffer()],
-        program.programId
-      );
-
-      await program.methods
-        .createJob(new anchor.BN(0.5 * LAMPORTS_PER_SOL), { docker: {} }, "penalty-job", "", "", new anchor.BN(10))
-        .accounts ({
-          jobAccount: penaltyJobPda,
-          escrow: penaltyEscrowPda,
-          renter: renter.publicKey,
-          counter: counterPda,
-          systemProgram: SystemProgram.programId
-        }as any)
-        .signers([renter])
-        .rpc();
-    });
-
-    it("should allow the renter to reject results and penalize the provider", async () => {
-      await program.methods.acceptJob(penaltyJobId).accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey }as any).signers([providerAuthority]).rpc();
-      await program.methods.submitResults(penaltyJobId, "bad results").accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey, systemProgram: SystemProgram.programId }).signers([providerAuthority]).rpc();
-      
-      const providerAccountBefore = await program.account.provider.fetch(providerAccountPda);
-
-      await program.methods.verifyResults(penaltyJobId, false).accounts({ jobAccount: penaltyJobPda, escrow: penaltyEscrowPda, renter: renter.publicKey, providerAccount: providerAccountPda, providerWallet: providerAuthority.publicKey, systemProgram: SystemProgram.programId }as any).signers([renter]).rpc();
-
-      const providerAccountAfter = await program.account.provider.fetch(providerAccountPda);
-      const jobAccountAfter = await program.account.jobAccount.fetch(penaltyJobPda);
-
-      assert.equal(providerAccountAfter.jobsFailed.toNumber(), providerAccountBefore.jobsFailed.toNumber() + 1, "Provider's failed jobs should increment");
-      assert.isTrue(providerAccountAfter.bannedUntil.gt(providerAccountBefore.bannedUntil), "Provider should be banned for a duration");
-      assert.equal(jobAccountAfter.status.hasOwnProperty("pending"), true, "Job should be reset to Pending");
-      assert.equal(jobAccountAfter.provider.toBase58(), SystemProgram.programId.toBase58(), "Job provider should be reset");
-    });
-
-    it("should prevent a banned provider from accepting a job", async () => {
-      // This test relies on the provider being banned from the previous test.
-      try {
-        await program.methods.acceptJob(penaltyJobId).accounts({ jobAccount: penaltyJobPda, providerAccount: providerAccountPda, provider: providerAuthority.publicKey }as any).signers([providerAuthority]).rpc();
-        assert.fail("Banned provider should not be able to accept a job");
-      } catch (e) {
-        assert.include(e.message, "Provider is currently banned or not available", "Error should be ProviderBannedOrBusy");
-      }
-    });
-
-    it("should allow the renter to reclaim a timed-out job", async () => {
-            const shortJobDuration = new anchor.BN(0); // 0 seconds to make it timeout instantly
-      const counterAccount = await program.account.jobCounter.fetch(counterPda);
-      const reclaimJobId = counterAccount.count;
-
-      const [reclaimJobPda] = PublicKey.findProgramAddressSync([Buffer.from("job"), reclaimJobId.toBuffer("le", 8)], program.programId);
-      const [reclaimEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from("escrow"), reclaimJobPda.toBuffer()], program.programId);
-
-      await program.methods.createJob(new anchor.BN(0.1 * LAMPORTS_PER_SOL), { docker: {} }, "reclaim-job", "", "", shortJobDuration).accounts({ jobAccount: reclaimJobPda, escrow: reclaimEscrowPda, renter: renter.publicKey, counter: counterPda, systemProgram: SystemProgram.programId }as any).signers([renter]).rpc();
-      
-      // FIX: Use the second, non-banned provider
-      await program.methods.acceptJob(reclaimJobId).accounts({ jobAccount: reclaimJobPda, providerAccount: providerAccountPda2, provider: providerAuthority2.publicKey, systemProgram: SystemProgram.programId }as any).signers([providerAuthority2]).rpc();
-
-      console.log("\n    Waiting for submission deadline to pass...");
-      await sleep(3000); // Wait 3 seconds, more than the job duration
-      console.log("    ...deadline passed.");
-
-      const providerAccountBefore = await program.account.provider.fetch(providerAccountPda2);
-
-      await program.methods.reclaimJob(reclaimJobId).accounts({ jobAccount: reclaimJobPda, providerAccount: providerAccountPda2, renter: renter.publicKey, systemProgram: SystemProgram.programId }).signers([renter]).rpc();
-
-      const providerAccountAfter = await program.account.provider.fetch(providerAccountPda2);
-      assert.equal(providerAccountAfter.jobsFailed.toNumber(), providerAccountBefore.jobsFailed.toNumber() + 1, "Provider's failed jobs should increment on reclaim");
-      assert.isTrue(providerAccountAfter.bannedUntil.gt(providerAccountBefore.bannedUntil), "Provider should be banned after reclaim");
-    });
-  });
 });

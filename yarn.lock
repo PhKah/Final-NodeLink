@@ -2354,6 +2354,7 @@ __metadata:
     "@types/mocha": "npm:^9.1.1"
     "@wasmer/sdk": "npm:^0.9.0"
     "@wasmer/wasi": "npm:^1.2.2"
+    bn.js: "npm:^5.2.1"
     chai: "npm:^4.3.4"
     commander: "npm:^12.1.0"
     it-tar: "npm:^6.0.5"
