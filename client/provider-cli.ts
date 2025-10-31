@@ -8,7 +8,7 @@ import { create, globSource } from 'kubo-rpc-client';
 import { init, Wasmer } from "@wasmer/sdk";
 import { WASI } from "@wasmer/wasi";
 import { extract } from 'it-tar';
-import { getWallet, getProgram, getIdl, getProgramId } from "./common.js";
+import { getWallet, getProgram, getIdl, getProgramId } from "./common.ts";
 
 type ExecutionResult = {
     outputPath: string;

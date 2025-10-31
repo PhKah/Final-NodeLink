@@ -28,7 +28,8 @@ let programId: PublicKey | null = null;
 export async function getProgramId(): Promise<PublicKey> {
     if (programId) return programId;
     const config = await getAnchorConfig();
-    programId = new PublicKey(config.programs.localnet.compute_share);
+    const clusterName = config.provider.cluster.toLowerCase();
+    programId = new PublicKey(config.programs[clusterName].compute_share);
     return programId;
 }
 
@@ -40,7 +41,7 @@ const CLUSTER_URLS: { [key: string]: string } = {
 
 export async function getConnection(): Promise<Connection> {
     const config = await getAnchorConfig();
-    const clusterName = config.provider.cluster;
+    const clusterName = config.provider.cluster.toLowerCase();
     const clusterUrl = CLUSTER_URLS[clusterName];
     if (!clusterUrl) {
         throw new Error(`Unknown cluster: ${clusterName}`);

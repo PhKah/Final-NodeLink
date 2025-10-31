@@ -1,6 +1,7 @@
 {
     "name": "compute-share",
     "version": "0.1.0",
+    "type": "module",
     "description": "A decentralized marketplace for computational power on Solana.",
     "scripts": {
         "lint:fix": "prettier --write \"*/*.js\" \"**/*.{js,ts}\"",

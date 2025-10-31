@@ -229,6 +229,7 @@ pub mod node_link {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
 pub enum ExecutionEngine {
     Docker,
+    Wasm,
 }
 
 #[account]
