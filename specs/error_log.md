@@ -1,6 +1,6 @@
 # Nhật ký gỡ lỗi & Các bài học kinh nghiệm
 
-Tài liệu này ghi lại hành trình gỡ lỗi bộ test cho smart contract `node-link`, đặc biệt là các lỗi phức tạp liên quan đến Anchor và Solana runtime.
+Tài liệu này ghi lại hành trình gỡ lỗi bộ test cho smart contract `compute-share`, đặc biệt là các lỗi phức tạp liên quan đến Anchor và Solana runtime.
 
 ---
 

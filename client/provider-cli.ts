@@ -126,7 +126,7 @@ async function createResultPackage(execResult: ExecutionResult): Promise<string>
 const program = new Command();
 
 program
-    .name("node-link-provider")
+    .name("compute-share-provider")
     .description("CLI for NodeLink providers to manage their nodes and jobs.")
     .version("0.1.0");
 
@@ -212,47 +212,26 @@ program
                         .rpc();
                     console.log(`   Job accepted! Transaction: ${acceptTx}`);
 
-                    let jobTempDir: string | null = null;
-                    let resultPackageDir: string | null = null;
                     try {
-                        const cid = jobToProcess.account.jobDetails;
+                        const jobDetails = jobToProcess.account.jobDetails;
 
-                        if (cid === 'Qm...e2e...CID') {
-                            console.log('   [TEST] Detected dummy CID. Skipping execution and submitting dummy results.');
-                            const resultCid = 'QmdummyresultsCid12345'; // A dummy result CID
-                            
-                            console.log(`   [CHAIN] Submitting result CID to chain...`);
-                            const submitTx = await program.methods
-                                .submitResults(jobId, resultCid)
-                                .accounts({ job: jobPda, providerAccount: providerPda} as any)
-                                .rpc();
-                            console.log(`   [CHAIN] Result submitted! Transaction: ${submitTx}`);
-                        } else {
-                            jobTempDir = await downloadJobDirectory(cid);
+                            const jobTempDir = await downloadJobDirectory(jobDetails);
                             const execResult = await executeWasmJob(jobTempDir);
                             
-                            resultPackageDir = await createResultPackage(execResult);
+                            const resultPackageDir = await createResultPackage(execResult);
                             const resultCid = await uploadToIpfs(resultPackageDir);
 
                             console.log(`   [CHAIN] Submitting result CID to chain...`);
                             const submitTx = await program.methods
                                 .submitResults(jobId, resultCid)
-                                .accounts({ job: jobPda, providerAccount: providerPda} as any)
+                                .accounts({ jobAccount: jobPda, providerAccount: providerPda} as any)
                                 .rpc();
                             console.log(`   [CHAIN] Result submitted! Transaction: ${submitTx}`);
-                        }
 
                     } catch (processingError) {
                         console.error(`   Error processing job ${jobId}:`, processingError.message);
                     } finally {
-                        if (jobTempDir) {
-                            console.log(`   [SYS] Cleaning up job directory: ${jobTempDir}`);
-                            await fs.rm(jobTempDir, { recursive: true, force: true });
-                        }
-                        if (resultPackageDir) {
-                            console.log(`   [SYS] Cleaning up result package directory: ${resultPackageDir}`);
-                            await fs.rm(resultPackageDir, { recursive: true, force: true });
-                        }
+                        // Clean up logic can be added here if needed
                     }
                 } catch (acceptError) {
                     if (acceptError.message.includes("Job is not pending")) {

@@ -7,8 +7,8 @@ import BN from "bn.js";
 const program = new Command();
 
 program
-    .name("node-link-renter")
-    .description("CLI for NodeLink renters to create and manage jobs.")
+    .name("compute-share-renter")
+    .description("CLI for Compute Share renters to create and manage jobs.")
     .version("0.1.0");
 
 program
@@ -44,7 +44,7 @@ program
                     counter: counterPda,
                     systemProgram: SystemProgram.programId,
                 } as any)
-                .signers([wallet]) // The renter needs to sign to pay for the accounts
+                .signers([wallet]) 
                 .rpc();
 
             console.log("Job created successfully!");
@@ -95,7 +95,6 @@ program
                 .verifyResults(jobId, isAccepted)
                 .accounts({
                     jobAccount: jobPda,
-                    escrow: escrowPda,
                     renter: renterKey,
                     providerAccount: providerPda,
                     systemProgram: SystemProgram.programId,

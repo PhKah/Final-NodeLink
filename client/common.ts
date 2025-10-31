@@ -1,6 +1,6 @@
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
-import type { NodeLink } from "../target/types/node_link.js";
+import type { ComputeShare } from "../target/types/compute-share.js";
 import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
@@ -11,7 +11,7 @@ import toml from 'toml';
 let idl: any = null;
 export async function getIdl() {
     if (idl) return idl;
-    idl = JSON.parse(await fs.readFile('./target/idl/node_link.json', 'utf-8'));
+    idl = JSON.parse(await fs.readFile('./target/idl/compute_share.json', 'utf-8'));
     return idl;
 }
 
@@ -28,7 +28,7 @@ let programId: PublicKey | null = null;
 export async function getProgramId(): Promise<PublicKey> {
     if (programId) return programId;
     const config = await getAnchorConfig();
-    programId = new PublicKey(config.programs.localnet.node_link);
+    programId = new PublicKey(config.programs.localnet.compute_share);
     return programId;
 }
 
@@ -69,9 +69,9 @@ export async function getWallet(keypairPath?: string): Promise<Keypair> {
     return Keypair.fromSecretKey(new Uint8Array(keypairData));
 }
 
-export async function getProgram(wallet: Wallet): Promise<Program<NodeLink>> {
+export async function getProgram(wallet: Wallet): Promise<Program<ComputeShare>> {
     const provider = await getProvider(wallet);
     const pId = await getProgramId();
     const i = await getIdl();
-    return new Program<NodeLink>(i, provider);
+    return new Program<ComputeShare>(i, provider);
 }

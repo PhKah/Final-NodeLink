@@ -1,5 +1,5 @@
 [package]
-name = "node-link"
+name = "compute-share"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
@@ -7,7 +7,7 @@ resolver = "2"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "node_link"
+name = "compute_share"
 
 [features]
 default = []
@@ -16,6 +16,7 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
 
 
 [dependencies]

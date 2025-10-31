@@ -1,11 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { NodeLink } from "../target/types/node_link.js";
+import { ComputeShare } from "../target/types/compute-share.js";
 
 module.exports = async function (provider: anchor.AnchorProvider) {
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.NodeLink as anchor.Program<NodeLink>;
+  const program = anchor.workspace.ComputeShare as anchor.Program<ComputeShare>;
 
   const [counterPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("counter")],

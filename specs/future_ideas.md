@@ -138,3 +138,28 @@ Sau khi phiên bản hỗ trợ Docker được triển khai thành công, hệ 
     - `required_storage_gb: u16`
     - `cpu_arch: String` (ví dụ: "x86_64", "arm64")
 - **Lợi ích:** Giúp Renter chỉ định chính xác yêu cầu phần cứng, và Provider chỉ nhận những job mà mình chắc chắn đáp ứng được, giảm tỷ lệ thất bại.
+
+---
+
+## Economic Viability for Providers
+
+**Problem:** How to ensure that the reward a provider receives is greater than the electricity cost they incur? This is crucial for the long-term sustainability of the network.
+
+### 1. Minimum Reward per Tag
+- **Idea:** Allow providers to set a minimum acceptable reward (in lamports/second) for specific job tags. For example, a provider with a powerful GPU could set a higher minimum reward for `gpu_intensive` jobs.
+- **Implementation:** Add a new field to the `ProviderAccount` on-chain, e.g., `min_reward_rates: Vec<(String, u64)>`, to store these minimum rates. The `accept_job` instruction would then check if the job's reward meets the provider's requirements.
+
+### 2. Cost Estimation in the Client
+- **Idea:** Enhance the `provider-cli` to be smarter. Before accepting a job, the CLI could automatically:
+    1.  **Estimate execution time:** Based on the Wasm module's complexity (a hard problem, but can start with simple heuristics).
+    2.  **Estimate power consumption:** Based on the hardware type.
+    3.  **Calculate electricity cost:** Based on a user-configured price.
+    4.  **Automatically reject:** If the estimated cost > reward, the CLI automatically skips the job.
+
+### 3. Dynamic Pricing and Bidding
+- **Idea:** Instead of a fixed price set by the renter, implement a bidding system.
+- **How it could work:**
+    - A renter submits a job with a maximum budget.
+    - Providers bid on the job.
+    - The renter can choose the best offer (based on price, provider reputation, etc.).
+- **Benefit:** Creates a more dynamic and efficient market where prices are determined by supply and demand.

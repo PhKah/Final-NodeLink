@@ -1,7 +1,5 @@
 [workspace]
-members = [
-    "programs/*"
-]
+members = ["programs/compute-share"]
 resolver = "2"
 
 [profile.release]

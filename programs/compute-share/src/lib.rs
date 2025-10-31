@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("9t2XwMCE5qdkRbNfKErTifAaPTX2ue5epJSaqH1hsAZJ");
+declare_id!("Afn7mniibRXcMvergvr1Q6BnF3vEDkJop1XSHrTXJLTR");
 
 const ANCHOR_DISCRIMINATOR_SIZE: usize = 8;
 const VERIFY_DURATION: i64 = 600; 
@@ -25,6 +25,8 @@ pub enum MyError {
     ProviderBannedOrBusy,
     #[msg("The submission deadline has not yet passed.")]
     SubmissionDeadlineNotPassed,
+    #[msg("Job is not in a state where payment can be claimed.")]
+    JobNotClaimable,
 }
 
 fn apply_penalty(provider: &mut Account<Provider>) -> Result<()> {
@@ -156,15 +158,6 @@ pub mod node_link {
 
         if is_accepted {
             provider_account.jobs_completed = provider_account.jobs_completed.checked_add(1).unwrap();
-
-            let cpi_context = CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.escrow.to_account_info(),
-                    to: ctx.accounts.provider_wallet.to_account_info(),
-                }
-            );
-            transfer(cpi_context, job_account.reward)?;
             job_account.status = JobStatus::Completed;
             msg!("Renter {} accepted results for job {}", job_account.renter, job_account.job_id);
         } else {
@@ -182,11 +175,18 @@ pub mod node_link {
     pub fn claim_payment(ctx: Context<ClaimPayment>, _job_id: u64) -> Result<()> {
         let job_account = &mut ctx.accounts.job_account;
         let provider_account = &mut ctx.accounts.provider_account;
+        let now = Clock::get()?.unix_timestamp;
 
-        require!(Clock::get()?.unix_timestamp > job_account.verification_deadline, MyError::VerificationDeadlineNotPassed);
-        require!(job_account.status == JobStatus::PendingVerification, MyError::JobNotPendingVerification);
+        let is_deadline_passed = now > job_account.verification_deadline;
 
-        provider_account.jobs_completed = provider_account.jobs_completed.checked_add(1).unwrap();
+        if job_account.status == JobStatus::PendingVerification && is_deadline_passed {
+            provider_account.jobs_completed = provider_account.jobs_completed.checked_add(1).unwrap();
+            job_account.status = JobStatus::Completed;
+        } 
+        else if job_account.status != JobStatus::Completed {
+            return err!(MyError::JobNotClaimable);
+        }
+
         provider_account.status = ProviderStatus::Available;
 
         let cpi_context = CpiContext::new(
@@ -197,7 +197,7 @@ pub mod node_link {
             }
         );
         transfer(cpi_context, job_account.reward)?;
-        job_account.status = JobStatus::Completed;
+
         msg!("Provider {} claimed payment for job {}", job_account.provider, job_account.job_id);
         Ok(())
     }
@@ -342,8 +342,6 @@ pub struct SubmitResults<'info> {
 pub struct VerifyResults<'info> {
     #[account(mut, seeds = [b"job", &job_id.to_le_bytes()], bump, has_one = renter)]
     pub job_account: Account<'info, JobAccount>,
-    #[account(mut, seeds = [b"escrow", job_account.key().as_ref()], bump)]
-    pub escrow: Account<'info, Escrow>,
     pub renter: Signer<'info>,
     #[account(
         mut,
@@ -352,9 +350,6 @@ pub struct VerifyResults<'info> {
         constraint = provider_account.authority == job_account.provider
     )]
     pub provider_account: Account<'info, Provider>,
-    /// CHECK: This is the provider's main wallet, we just need to ensure it's writable.
-    #[account(mut, constraint = provider_wallet.key() == provider_account.authority)]
-    pub provider_wallet: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 

@@ -16,7 +16,7 @@
 ### Giai đoạn 1: Xây dựng Smart Contract (On-chain Program)
 
 - [x] **1.1: Khởi tạo và Cấu trúc chương trình Anchor**
-  - [x] Kiểm tra lại cấu trúc dự án Anchor (`Anchor.toml`, `programs/node-link/src/lib.rs`).
+  - [x] Kiểm tra lại cấu trúc dự án Anchor (`Anchor.toml`, `programs/compute-share/src/lib.rs`).
   - Implemented by: [Khánh]
 - [x] **1.2: Xây dựng Logic Đăng ký Node (On-chain Registry)**
   - [x] Định nghĩa `NodeAccount` (PDA) để lưu thông tin provider.
@@ -84,7 +84,7 @@
 ### Giai đoạn 4: Kiểm thử và Hoàn thiện Demo
 
 - [x] **4.1: Viết Unit Test cho Smart Contract**
-  - [x] Viết test cho toàn bộ luồng trong `tests/node-link.ts`.
+  - [x] Viết test cho toàn bộ luồng trong `tests/compute-share.ts`.
   - Implemented by: [Gemini & Khánh]
 - [ ] **4.2: Triển khai lên Devnet**
   - [ ] Dùng `anchor deploy` để đưa smart contract và chạy script `migrations/deploy.ts` lên Devnet.

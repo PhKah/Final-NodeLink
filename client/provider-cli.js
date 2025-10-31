@@ -1,3 +1,37 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -14,23 +48,24 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
     function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
     function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
 };
-import { Command } from "commander";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { Wallet } from "@coral-xyz/anchor";
-import * as fs from "fs/promises";
-import * as os from "os";
-import * as path from "path";
-import { create, globSource } from 'kubo-rpc-client';
-import { init, Wasmer } from "@wasmer/sdk";
-import { WASI } from "@wasmer/wasi";
-import { extract } from 'it-tar';
-import { getWallet, getProgram, getIdl, getProgramId } from "./common.js";
+Object.defineProperty(exports, "__esModule", { value: true });
+const commander_1 = require("commander");
+const web3_js_1 = require("@solana/web3.js");
+const anchor_1 = require("@coral-xyz/anchor");
+const fs = __importStar(require("fs/promises"));
+const os = __importStar(require("os"));
+const path = __importStar(require("path"));
+const kubo_rpc_client_1 = require("kubo-rpc-client");
+const sdk_1 = require("@wasmer/sdk");
+const wasi_1 = require("@wasmer/wasi");
+const it_tar_1 = require("it-tar");
+const common_js_1 = require("./common.js");
 // --- IPFS Helpers ---
 function downloadJobDirectory(cid) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, e_1, _b, _c, _d, e_2, _e, _f;
         console.log(`   [IPFS] Creating IPFS client...`);
-        const ipfs = create();
+        const ipfs = (0, kubo_rpc_client_1.create)();
         console.log(`   [IPFS] Creating temporary directory...`);
         const tempDir = yield fs.mkdtemp(path.join(os.tmpdir(), 'nodelink-job-'));
         console.log(`   [IPFS] Job directory created`);
@@ -38,7 +73,7 @@ function downloadJobDirectory(cid) {
         const tarStream = ipfs.get(cid);
         let fileCount = 0;
         try {
-            for (var _g = true, _h = __asyncValues(extract()(tarStream)), _j; _j = yield _h.next(), _a = _j.done, !_a; _g = true) {
+            for (var _g = true, _h = __asyncValues((0, it_tar_1.extract)()(tarStream)), _j; _j = yield _h.next(), _a = _j.done, !_a; _g = true) {
                 _c = _j.value;
                 _g = false;
                 const entry = _c;
@@ -84,10 +119,10 @@ function uploadToIpfs(directoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, e_3, _b, _c;
         console.log(`   [IPFS] Uploading result package from ${directoryPath}...`);
-        const ipfs = create();
+        const ipfs = (0, kubo_rpc_client_1.create)();
         let rootCid = '';
         try {
-            for (var _d = true, _e = __asyncValues(ipfs.addAll(globSource(directoryPath, '**/*'))), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
+            for (var _d = true, _e = __asyncValues(ipfs.addAll((0, kubo_rpc_client_1.globSource)(directoryPath, '**/*'))), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
                 _c = _f.value;
                 _d = false;
                 const file = _c;
@@ -109,7 +144,7 @@ function uploadToIpfs(directoryPath) {
 function executeWasmJob(jobDirectoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`   [WASM] Initializing Wasmer SDK...`);
-        yield init();
+        yield (0, sdk_1.init)();
         console.log(`   [WASM] Reading manifest...`);
         const manifestPath = path.join(jobDirectoryPath, 'manifest.json');
         const manifestExists = yield fs.access(manifestPath).then(() => true).catch(() => false);
@@ -121,7 +156,7 @@ function executeWasmJob(jobDirectoryPath) {
         const wasmFilePath = path.join(jobDirectoryPath, manifest.executable);
         console.log(`   [WASM] Loading Wasm module from: ${wasmFilePath}`);
         console.log(`   [WASM] Initializing WASI sandbox...`);
-        const wasi = new WASI({
+        const wasi = new wasi_1.WASI({
             args: [manifest.executable, ...manifest.args],
             env: {},
             preopens: {
@@ -129,7 +164,7 @@ function executeWasmJob(jobDirectoryPath) {
             }
         });
         const wasmBytes = yield fs.readFile(wasmFilePath);
-        const module = yield Wasmer.fromFile(wasmBytes);
+        const module = yield sdk_1.Wasmer.fromFile(wasmBytes);
         console.log(`   [WASM] Instantiating module with WASI imports...`);
         const instance = yield wasi.instantiate(module, wasi.getImports(module));
         console.log(`   [WASM] Running instance...`);
@@ -157,9 +192,9 @@ function createResultPackage(execResult) {
     });
 }
 // cli
-const program = new Command();
+const program = new commander_1.Command();
 program
-    .name("node-link-provider")
+    .name("compute-share-provider")
     .description("CLI for NodeLink providers to manage their nodes and jobs.")
     .version("0.1.0");
 program
@@ -171,16 +206,16 @@ program
     .action((options) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log("Registering provider...");
-        const wallet = yield getWallet(options.keypair);
+        const wallet = yield (0, common_js_1.getWallet)(options.keypair);
         console.log(`Provider wallet loaded: ${wallet.publicKey.toBase58()}`);
-        const program = yield getProgram(new Wallet(wallet));
-        const [providerPda] = PublicKey.findProgramAddressSync([Buffer.from("provider"), wallet.publicKey.toBuffer()], program.programId);
+        const program = yield (0, common_js_1.getProgram)(new anchor_1.Wallet(wallet));
+        const [providerPda] = web3_js_1.PublicKey.findProgramAddressSync([Buffer.from("provider"), wallet.publicKey.toBuffer()], program.programId);
         const tx = yield program.methods
             .providerRegister(options.jobTags, options.hardwareConfig)
             .accounts({
             provider: providerPda,
             authority: wallet.publicKey,
-            systemProgram: SystemProgram.programId,
+            systemProgram: web3_js_1.SystemProgram.programId,
         })
             .rpc();
         console.log("Provider registered successfully!");
@@ -201,10 +236,10 @@ program
     .option("-k, --keypair <path>", "Path to the provider's keypair file.")
     .action((options) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Starting provider daemon...");
-    const wallet = yield getWallet(options.keypair);
-    const program = yield getProgram(new Wallet(wallet));
+    const wallet = yield (0, common_js_1.getWallet)(options.keypair);
+    const program = yield (0, common_js_1.getProgram)(new anchor_1.Wallet(wallet));
     const providerKey = wallet.publicKey;
-    const [providerPda] = PublicKey.findProgramAddressSync([Buffer.from("provider"), providerKey.toBuffer()], program.programId);
+    const [providerPda] = web3_js_1.PublicKey.findProgramAddressSync([Buffer.from("provider"), providerKey.toBuffer()], program.programId);
     console.log(`Daemon started for provider: ${providerKey.toBase58()}`);
     console.log(`Provider PDA: ${providerPda.toBase58()}`);
     console.log("Scanning for available jobs... ");
@@ -231,18 +266,16 @@ program
                     .accounts({ jobAccount: jobPda, providerAccount: providerPda })
                     .rpc();
                 console.log(`   Job accepted! Transaction: ${acceptTx}`);
-                let jobTempDir = null;
-                let resultPackageDir = null;
                 try {
-                    const cid = jobToProcess.account.jobDetails;
-                    jobTempDir = yield downloadJobDirectory(cid);
+                    const jobDetails = jobToProcess.account.jobDetails;
+                    const jobTempDir = yield downloadJobDirectory(jobDetails);
                     const execResult = yield executeWasmJob(jobTempDir);
-                    resultPackageDir = yield createResultPackage(execResult);
+                    const resultPackageDir = yield createResultPackage(execResult);
                     const resultCid = yield uploadToIpfs(resultPackageDir);
                     console.log(`   [CHAIN] Submitting result CID to chain...`);
                     const submitTx = yield program.methods
                         .submitResults(jobId, resultCid)
-                        .accounts({ job: jobPda, providerAccount: providerPda })
+                        .accounts({ jobAccount: jobPda, providerAccount: providerPda })
                         .rpc();
                     console.log(`   [CHAIN] Result submitted! Transaction: ${submitTx}`);
                 }
@@ -250,14 +283,7 @@ program
                     console.error(`   Error processing job ${jobId}:`, processingError.message);
                 }
                 finally {
-                    if (jobTempDir) {
-                        console.log(`   [SYS] Cleaning up job directory: ${jobTempDir}`);
-                        yield fs.rm(jobTempDir, { recursive: true, force: true });
-                    }
-                    if (resultPackageDir) {
-                        console.log(`   [SYS] Cleaning up result package directory: ${resultPackageDir}`);
-                        yield fs.rm(resultPackageDir, { recursive: true, force: true });
-                    }
+                    // Clean up logic can be added here if needed
                 }
             }
             catch (acceptError) {
@@ -276,7 +302,7 @@ program
     }
 }));
 (() => __awaiter(void 0, void 0, void 0, function* () {
-    yield getIdl();
-    yield getProgramId();
+    yield (0, common_js_1.getIdl)();
+    yield (0, common_js_1.getProgramId)();
     program.parse(process.argv);
 }))();

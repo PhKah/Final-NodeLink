@@ -1,0 +1,5 @@
+{
+  "executable": "main.wasm",
+  "args": [],
+  "output_path": "/output"
+}
