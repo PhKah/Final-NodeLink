@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
-import { getWallet, getProgram, getProgramId, getIdl } from "./common.js";
+import { getWallet, getProgram, getProgramId, getIdl } from "./common.ts";
 import BN from "bn.js";
 
 const program = new Command();
@@ -33,10 +33,13 @@ program
 
             const reward = new BN(options.reward);
             const max_duration = new BN(3600); // 1 hour
+            const engine = { docker: {} }; //for demo
+            const job_tags = "demo-job"; //for demo
+            const hardware_tags = "any"; //for demo
 
             console.log(`Submitting job with ID: ${jobId.toString()}`);
             const tx = await program.methods
-                .createJob(reward, { docker: {} }, "test-job", "test-hardware", options.details, max_duration)
+                .createJob(reward, engine, job_tags, hardware_tags, options.details, max_duration)
                 .accounts({
                     jobAccount: jobPda,
                     escrow: escrowPda,

@@ -13,7 +13,7 @@ import BN from "bn.js";
 const N = 1; // For WASM test, we'll use a single renter/provider for simplicity
 const WASM_JOB_DIR = "tests/wasm-jobs/double-number";
 
-// --- Helper Functions ---
+// --- Helper Functions --- 
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -35,8 +35,8 @@ $ ${command}`);
         return output;
     } catch (e) {
         console.error(`Error executing command: ${command}`);
-        console.error(e.stdout);
-        console.error(e.stderr);
+        console.error(e.stdout); // Log stdout from the failed command
+        console.error(e.stderr); // Log stderr from the failed command
         throw e;
     }
 };
@@ -45,7 +45,7 @@ const startListener = (command: string): ChildProcess => {
     console.log(`
 $ ${command}`);
     const [cmd, ...args] = command.split(' ');
-    const child = spawn(cmd, args, {
+    const child = spawn(cmd, args, { 
         stdio: ['pipe', 'pipe', 'pipe'], // Pipe stdout, stderr
     });
 
@@ -94,7 +94,7 @@ describe("NodeLink End-to-End Tests", () => {
         }
 
         // 2. Airdrop SOL
-        console.log("--- Airdropping SOL to all participants ---");
+        console.log("--- Airdropping SOL to all participants --- ");
         const allPubkeys = [...renters.map(r => r.keypair.publicKey), ...providers.map(p => p.keypair.publicKey)];
         await Promise.all(allPubkeys.map(pk => airdrop(provider.connection, pk)));
         console.log("Airdrops complete.");
@@ -103,7 +103,7 @@ describe("NodeLink End-to-End Tests", () => {
         const [counterPda] = PublicKey.findProgramAddressSync([Buffer.from("counter")], program.programId);
         const counterAccount = await program.account.jobCounter.fetchNullable(counterPda);
         if (counterAccount === null) {
-            console.log("--- Initializing JobCounter ---");
+            console.log("--- Initializing JobCounter --- ");
             await program.methods.initializeCounter().accounts({
                 counter: counterPda,
                 user: provider.wallet.publicKey,
@@ -112,7 +112,7 @@ describe("NodeLink End-to-End Tests", () => {
         }
 
         // 4. Register all providers
-        console.log("--- Registering all Providers ---");
+        console.log("--- Registering all Providers --- ");
         for (let i = 0; i < N; i++) {
             const p = providers[i];
             runCliSync(
@@ -123,7 +123,7 @@ describe("NodeLink End-to-End Tests", () => {
     });
 
     after(async () => {
-        console.log("--- Tearing Down Test ---");
+        console.log("--- Tearing Down Test --- ");
         listenerProcesses.forEach(p => {
             if (p && !p.killed) p.kill();
         });
@@ -139,7 +139,7 @@ describe("NodeLink End-to-End Tests", () => {
 
         before(async function() {
             this.timeout(60000);
-            console.log("--- Preparing WASM Job ---");
+            console.log("--- Preparing WASM Job --- ");
 
             // 1. Compile the WASM module
             console.log("Compiling WASM module...");
@@ -166,13 +166,13 @@ describe("NodeLink End-to-End Tests", () => {
             const testProvider = providers[0];
 
             // 1. Start a provider listener
-            console.log("--- Starting Provider Listener for WASM Test ---");
+            console.log("--- Starting Provider Listener for WASM Test --- ");
             const listener = startListener(`ts-node client/provider-cli.ts listen --keypair ${testProvider.keypairPath}`);
             listenerProcesses.push(listener);
             await sleep(5000); // Give listener time to start
 
             // 2. Renter creates the WASM job
-            console.log("--- Renter Creating WASM Job ---");
+            console.log("--- Renter Creating WASM Job --- ");
             const createOutput = runCliSync(
                 `client/renter-cli.ts create-job --keypair ${testRenter.keypairPath} --reward ${LAMPORTS_PER_SOL} --details ${wasmJobCID}`
             );
@@ -183,7 +183,7 @@ describe("NodeLink End-to-End Tests", () => {
             console.log(`WASM Job created with ID: ${jobId} and PDA: ${jobPda.toBase58()}`);
 
             // 3. Poll for job to be processed
-            console.log("--- Polling for WASM Job Processing ---");
+            console.log("--- Polling for WASM Job Processing --- ");
             let jobState = await program.account.jobAccount.fetch(jobPda);
             let attempts = 0;
             while (Object.keys(jobState.status)[0] !== 'pendingVerification' && attempts < 40) {
@@ -194,7 +194,7 @@ describe("NodeLink End-to-End Tests", () => {
             assert.equal(Object.keys(jobState.status)[0], 'pendingVerification', "WASM job did not enter verification state.");
 
             // 4. Renter verifies the result
-            console.log("--- Renter Verifying WASM Result ---");
+            console.log("--- Renter Verifying WASM Result --- ");
             const resultCID = jobState.results;
             assert.isString(resultCID);
             assert.isNotEmpty(resultCID);
@@ -224,6 +224,43 @@ describe("NodeLink End-to-End Tests", () => {
             const finalState = await program.account.jobAccount.fetch(jobPda);
             assert.equal(Object.keys(finalState.status)[0], 'completed', "Job should be in COMPLETED state");
             console.log("✅ Success! WASM job lifecycle completed successfully.");
+        });
+    });
+
+    describe("Multiple Job Creation for Demo", () => {
+        const DEMO_RENTER_KEYPAIR_PATH = path.join(os.homedir(), ".config", "solana", "id.json");
+        const DEMO_RENTER_PUBLIC_KEY = Keypair.fromSecretKey(new Uint8Array(JSON.parse(execSync(`cat ${DEMO_RENTER_KEYPAIR_PATH}`).toString()))).publicKey;
+        const DEMO_IPFS_CID = "QmPlaceholderCIDForDemo"; // Replace with a real CID if needed
+        const NUM_JOBS_TO_CREATE = 5; // Number of jobs to create for demo
+
+        before(async function() {
+            this.timeout(60000); // 1 minute for setup
+            console.log("--- Setting up Demo Renter for Multiple Jobs ---");
+            console.log(`Using Renter Keypair: ${DEMO_RENTER_KEYPAIR_PATH}`);
+            console.log(`Renter Public Key: ${DEMO_RENTER_PUBLIC_KEY.toBase58()}`);
+
+            // Airdrop SOL to the demo renter
+            console.log("Airdropping SOL to Demo Renter...");
+            await airdrop(provider.connection, DEMO_RENTER_PUBLIC_KEY);
+            console.log("Airdrop complete.");
+        });
+
+        it(`should create ${NUM_JOBS_TO_CREATE} jobs for demo purposes`, async function() {
+            this.timeout(NUM_JOBS_TO_CREATE * 10000); // 10 seconds per job
+            console.log(`--- Creating ${NUM_JOBS_TO_CREATE} Demo Jobs ---`);
+
+            for (let i = 0; i < NUM_JOBS_TO_CREATE; i++) {
+                console.log(`Creating Job ${i + 1}/${NUM_JOBS_TO_CREATE}...`);
+                const uniqueCid = `${DEMO_IPFS_CID}-${i}`;
+                runCliSync(
+                    `client/renter-cli.ts create-job \
+  --keypair ${DEMO_RENTER_KEYPAIR_PATH} \
+  --reward ${LAMPORTS_PER_SOL / 10} \
+  --details ${uniqueCid}`
+                );
+                await sleep(1000); // Small delay to avoid rate limits
+            }
+            console.log(`--- Successfully Created ${NUM_JOBS_TO_CREATE} Demo Jobs ---`);
         });
     });
 });
